@@ -46,6 +46,7 @@ local savedMaxZoom = nil
 local savedCameraOffset = nil
 local isShiftLockEnabled = false
 local shiftLockConnection = nil
+local savedShiftLockState = nil
 local isCursorUnlocked = false
 local UnlockCursorConnection
 local UnlockCursorKeyBind = nil
@@ -472,7 +473,14 @@ local function DisableFirstPerson()
     savedCameraOffset = nil
 end
 
+local function SaveShiftLockState()
+    if savedShiftLockState == nil then
+        savedShiftLockState = player.DevEnableMouseLock
+    end
+end
+
 local function EnableShiftlock()
+    SaveShiftLockState()
     player.DevEnableMouseLock = true
     if shiftLockConnection then
         shiftLockConnection:Disconnect()
@@ -487,11 +495,23 @@ local function EnableShiftlock()
 end
 
 local function DisableShiftlock()
+    SaveShiftLockState()
     if shiftLockConnection then
         shiftLockConnection:Disconnect()
         shiftLockConnection = nil
     end
     player.DevEnableMouseLock = false
+end
+
+local function ResetShiftLock()
+    if shiftLockConnection then
+        shiftLockConnection:Disconnect()
+        shiftLockConnection = nil
+    end
+    if savedShiftLockState ~= nil then
+        player.DevEnableMouseLock = savedShiftLockState
+        savedShiftLockState = nil
+    end
 end
 
 local function ToggleCursor()
@@ -1751,27 +1771,27 @@ corners.ResetSpeed = Instance.new("UICorner")
 corners.ResetSpeed.CornerRadius = UDim.new(0, 10)
 corners.ResetSpeed.Parent = buttons.ResetSpeed
 
-buttons.XRAY = Instance.new("TextButton")
-buttons.XRAY.Name = "XRAYButton"
-buttons.XRAY.Text = "XRAY: Off"
-buttons.XRAY.AnchorPoint = Vector2.new(0.5, 0.5)
-buttons.XRAY.Size = UDim2.new(0.32, 0, 0.12, 0)
-buttons.XRAY.Position = UDim2.new(1.410, 0, 0.4, 0)
-buttons.XRAY.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-buttons.XRAY.BorderSizePixel = 0
-buttons.XRAY.TextScaled = true
-buttons.XRAY.TextWrapped = true
-buttons.XRAY.TextColor3 = Color3.fromRGB(255, 255, 255)
-buttons.XRAY.Parent = contentFrame
+buttons.AirWalk = Instance.new("TextButton")
+buttons.AirWalk.Name = "AirWalkButton"
+buttons.AirWalk.Text = "Air Walk"
+buttons.AirWalk.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.AirWalk.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.AirWalk.Position = UDim2.new(1.410, 0, 0.4, 0)
+buttons.AirWalk.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.AirWalk.BorderSizePixel = 0
+buttons.AirWalk.TextScaled = true
+buttons.AirWalk.TextWrapped = true
+buttons.AirWalk.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.AirWalk.Parent = contentFrame
 
-constraints.XRAY = Instance.new("UITextSizeConstraint")
-constraints.XRAY.MaxTextSize = 14
-constraints.XRAY.MinTextSize = 8
-constraints.XRAY.Parent = buttons.XRAY
+constraints.AirWalk = Instance.new("UITextSizeConstraint")
+constraints.AirWalk.MaxTextSize = 14
+constraints.AirWalk.MinTextSize = 8
+constraints.AirWalk.Parent = buttons.AirWalk
 
-corners.XRAY = Instance.new("UICorner")
-corners.XRAY.CornerRadius = UDim.new(0, 10)
-corners.XRAY.Parent = buttons.XRAY
+corners.AirWalk = Instance.new("UICorner")
+corners.AirWalk.CornerRadius = UDim.new(0, 10)
+corners.AirWalk.Parent = buttons.AirWalk
 
 buttons.ThirdPerson = Instance.new("TextButton")
 buttons.ThirdPerson.Name = "ThirdPersonButton"
@@ -1817,49 +1837,49 @@ corners.FirstPerson = Instance.new("UICorner")
 corners.FirstPerson.CornerRadius = UDim.new(0, 10)
 corners.FirstPerson.Parent = buttons.FirstPerson
 
-buttons.FShiftlock = Instance.new("TextButton")
-buttons.FShiftlock.Name = "FShiftlockButton"
-buttons.FShiftlock.Text = "Force ShiftLock: Off\n(PC Only)"
-buttons.FShiftlock.AnchorPoint = Vector2.new(0.5, 0.5)
-buttons.FShiftlock.Size = UDim2.new(0.32, 0, 0.12, 0)
-buttons.FShiftlock.Position = UDim2.new(0.345, 0, 0.55, 0)
-buttons.FShiftlock.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-buttons.FShiftlock.BorderSizePixel = 0
-buttons.FShiftlock.TextScaled = true
-buttons.FShiftlock.TextWrapped = true
-buttons.FShiftlock.TextColor3 = Color3.fromRGB(255, 255, 255)
-buttons.FShiftlock.Parent = contentFrame
+buttons.LedgeClimbing = Instance.new("TextButton")
+buttons.LedgeClimbing.Name = "LedgeClimbingButton"
+buttons.LedgeClimbing.Text = "Ledge Climbing: Off\n(Unfinished)"
+buttons.LedgeClimbing.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.LedgeClimbing.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.LedgeClimbing.Position = UDim2.new(0.345, 0, 0.55, 0)
+buttons.LedgeClimbing.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.LedgeClimbing.BorderSizePixel = 0
+buttons.LedgeClimbing.TextScaled = true
+buttons.LedgeClimbing.TextWrapped = true
+buttons.LedgeClimbing.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.LedgeClimbing.Parent = contentFrame
 
-constraints.FShiftlock = Instance.new("UITextSizeConstraint")
-constraints.FShiftlock.MaxTextSize = 14
-constraints.FShiftlock.MinTextSize = 8
-constraints.FShiftlock.Parent = buttons.FShiftlock
+constraints.LedgeClimbing = Instance.new("UITextSizeConstraint")
+constraints.LedgeClimbing.MaxTextSize = 14
+constraints.LedgeClimbing.MinTextSize = 8
+constraints.LedgeClimbing.Parent = buttons.LedgeClimbing
 
-corners.FShiftlock = Instance.new("UICorner")
-corners.FShiftlock.CornerRadius = UDim.new(0, 10)
-corners.FShiftlock.Parent = buttons.FShiftlock
+corners.LedgeClimbing = Instance.new("UICorner")
+corners.LedgeClimbing.CornerRadius = UDim.new(0, 10)
+corners.LedgeClimbing.Parent = buttons.LedgeClimbing
 
-buttons.CShiftlock = Instance.new("TextButton")
-buttons.CShiftlock.Name = "CShiftlockButton"
-buttons.CShiftlock.Text = "Custom ShiftLock\n(Mobile & PC)"
-buttons.CShiftlock.AnchorPoint = Vector2.new(0.5, 0.5)
-buttons.CShiftlock.Size = UDim2.new(0.32, 0, 0.12, 0)
-buttons.CShiftlock.Position = UDim2.new(0.700, 0, 0.55, 0)
-buttons.CShiftlock.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-buttons.CShiftlock.BorderSizePixel = 0
-buttons.CShiftlock.TextScaled = true
-buttons.CShiftlock.TextWrapped = true
-buttons.CShiftlock.TextColor3 = Color3.fromRGB(255, 255, 255)
-buttons.CShiftlock.Parent = contentFrame
+buttons.LedgeClimber = Instance.new("TextButton")
+buttons.LedgeClimber.Name = "LedgeClimberButton"
+buttons.LedgeClimber.Text = "Ledge Climber: Off\n(Beta)"
+buttons.LedgeClimber.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.LedgeClimber.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.LedgeClimber.Position = UDim2.new(0.700, 0, 0.55, 0)
+buttons.LedgeClimber.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.LedgeClimber.BorderSizePixel = 0
+buttons.LedgeClimber.TextScaled = true
+buttons.LedgeClimber.TextWrapped = true
+buttons.LedgeClimber.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.LedgeClimber.Parent = contentFrame
 
-constraints.CShiftlock = Instance.new("UITextSizeConstraint")
-constraints.CShiftlock.MaxTextSize = 14
-constraints.CShiftlock.MinTextSize = 8
-constraints.CShiftlock.Parent = buttons.CShiftlock
+constraints.LedgeClimber = Instance.new("UITextSizeConstraint")
+constraints.LedgeClimber.MaxTextSize = 14
+constraints.LedgeClimber.MinTextSize = 8
+constraints.LedgeClimber.Parent = buttons.LedgeClimber
 
-corners.CShiftlock = Instance.new("UICorner")
-corners.CShiftlock.CornerRadius = UDim.new(0, 10)
-corners.CShiftlock.Parent = buttons.CShiftlock
+corners.LedgeClimber = Instance.new("UICorner")
+corners.LedgeClimber.CornerRadius = UDim.new(0, 10)
+corners.LedgeClimber.Parent = buttons.LedgeClimber
 
 buttons.UnlockCursor = Instance.new("TextButton")
 buttons.UnlockCursor.Name = "UnlockCursorButton"
@@ -1993,56 +2013,12 @@ corners.TeamCheck = Instance.new("UICorner")
 corners.TeamCheck.CornerRadius = UDim.new(0, 10)
 corners.TeamCheck.Parent = buttons.TeamCheck
 
-buttons.LedgeClimbing = Instance.new("TextButton")
-buttons.LedgeClimbing.Name = "LedgeClimbingButton"
-buttons.LedgeClimbing.Text = "Ledge Climbing: Off\n(Beta)"
-buttons.LedgeClimbing.AnchorPoint = Vector2.new(0.5, 0.5)
-buttons.LedgeClimbing.Size = UDim2.new(0.32, 0, 0.12, 0)
-buttons.LedgeClimbing.Position = UDim2.new(1.055, 0, 0.7, 0)
-buttons.LedgeClimbing.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-buttons.LedgeClimbing.BorderSizePixel = 0
-buttons.LedgeClimbing.TextScaled = true
-buttons.LedgeClimbing.TextWrapped = true
-buttons.LedgeClimbing.TextColor3 = Color3.fromRGB(255, 255, 255)
-buttons.LedgeClimbing.Parent = contentFrame
-
-constraints.LedgeClimbing = Instance.new("UITextSizeConstraint")
-constraints.LedgeClimbing.MaxTextSize = 14
-constraints.LedgeClimbing.MinTextSize = 8
-constraints.LedgeClimbing.Parent = buttons.LedgeClimbing
-
-corners.LedgeClimbing = Instance.new("UICorner")
-corners.LedgeClimbing.CornerRadius = UDim.new(0, 10)
-corners.LedgeClimbing.Parent = buttons.LedgeClimbing
-
-buttons.LedgeClimber = Instance.new("TextButton")
-buttons.LedgeClimber.Name = "LedgeClimberButton"
-buttons.LedgeClimber.Text = "Ledge Climber: Off\n(Beta)"
-buttons.LedgeClimber.AnchorPoint = Vector2.new(0.5, 0.5)
-buttons.LedgeClimber.Size = UDim2.new(0.32, 0, 0.12, 0)
-buttons.LedgeClimber.Position = UDim2.new(1.410, 0, 0.7, 0)
-buttons.LedgeClimber.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-buttons.LedgeClimber.BorderSizePixel = 0
-buttons.LedgeClimber.TextScaled = true
-buttons.LedgeClimber.TextWrapped = true
-buttons.LedgeClimber.TextColor3 = Color3.fromRGB(255, 255, 255)
-buttons.LedgeClimber.Parent = contentFrame
-
-constraints.LedgeClimber = Instance.new("UITextSizeConstraint")
-constraints.LedgeClimber.MaxTextSize = 14
-constraints.LedgeClimber.MinTextSize = 8
-constraints.LedgeClimber.Parent = buttons.LedgeClimber
-
-corners.LedgeClimber = Instance.new("UICorner")
-corners.LedgeClimber.CornerRadius = UDim.new(0, 10)
-corners.LedgeClimber.Parent = buttons.LedgeClimber
-
 buttons.FullBright = Instance.new("TextButton")
 buttons.FullBright.Name = "FullBrightButton"
 buttons.FullBright.Text = "Full Bright: Off"
 buttons.FullBright.AnchorPoint = Vector2.new(0.5, 0.5)
 buttons.FullBright.Size = UDim2.new(0.32, 0, 0.12, 0)
-buttons.FullBright.Position = UDim2.new(1.410, 0, 0.85, 0)
+buttons.FullBright.Position = UDim2.new(1.055, 0, 0.7, 0)
 buttons.FullBright.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 buttons.FullBright.BorderSizePixel = 0
 buttons.FullBright.TextScaled = true
@@ -2058,6 +2034,94 @@ constraints.FullBright.Parent = buttons.FullBright
 corners.FullBright = Instance.new("UICorner")
 corners.FullBright.CornerRadius = UDim.new(0, 10)
 corners.FullBright.Parent = buttons.FullBright
+
+buttons.XRAY = Instance.new("TextButton")
+buttons.XRAY.Name = "XRAYButton"
+buttons.XRAY.Text = "XRAY: Off"
+buttons.XRAY.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.XRAY.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.XRAY.Position = UDim2.new(1.410, 0, 0.7, 0)
+buttons.XRAY.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.XRAY.BorderSizePixel = 0
+buttons.XRAY.TextScaled = true
+buttons.XRAY.TextWrapped = true
+buttons.XRAY.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.XRAY.Parent = contentFrame
+
+constraints.XRAY = Instance.new("UITextSizeConstraint")
+constraints.XRAY.MaxTextSize = 14
+constraints.XRAY.MinTextSize = 8
+constraints.XRAY.Parent = buttons.XRAY
+
+corners.XRAY = Instance.new("UICorner")
+corners.XRAY.CornerRadius = UDim.new(0, 10)
+corners.XRAY.Parent = buttons.XRAY
+
+buttons.FShiftlock = Instance.new("TextButton")
+buttons.FShiftlock.Name = "FShiftlockButton"
+buttons.FShiftlock.Text = "Force ShiftLock: Off\n(PC Only)"
+buttons.FShiftlock.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.FShiftlock.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.FShiftlock.Position = UDim2.new(-0.365, 0, 0.85, 0)
+buttons.FShiftlock.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.FShiftlock.BorderSizePixel = 0
+buttons.FShiftlock.TextScaled = true
+buttons.FShiftlock.TextWrapped = true
+buttons.FShiftlock.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.FShiftlock.Parent = contentFrame
+
+constraints.FShiftlock = Instance.new("UITextSizeConstraint")
+constraints.FShiftlock.MaxTextSize = 14
+constraints.FShiftlock.MinTextSize = 8
+constraints.FShiftlock.Parent = buttons.FShiftlock
+
+corners.FShiftlock = Instance.new("UICorner")
+corners.FShiftlock.CornerRadius = UDim.new(0, 10)
+corners.FShiftlock.Parent = buttons.FShiftlock
+
+buttons.FDShiftlock = Instance.new("TextButton")
+buttons.FDShiftlock.Name = "FDShiftlockButton"
+buttons.FDShiftlock.Text = "Disable ShiftLock: Off\n(PC Only)"
+buttons.FDShiftlock.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.FDShiftlock.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.FDShiftlock.Position = UDim2.new(-0.010, 0, 0.85, 0)
+buttons.FDShiftlock.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.FDShiftlock.BorderSizePixel = 0
+buttons.FDShiftlock.TextScaled = true
+buttons.FDShiftlock.TextWrapped = true
+buttons.FDShiftlock.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.FDShiftlock.Parent = contentFrame
+
+constraints.FDShiftlock = Instance.new("UITextSizeConstraint")
+constraints.FDShiftlock.MaxTextSize = 14
+constraints.FDShiftlock.MinTextSize = 8
+constraints.FDShiftlock.Parent = buttons.FDShiftlock
+
+corners.FDShiftlock = Instance.new("UICorner")
+corners.FDShiftlock.CornerRadius = UDim.new(0, 10)
+corners.FDShiftlock.Parent = buttons.FDShiftlock
+
+buttons.CShiftlock = Instance.new("TextButton")
+buttons.CShiftlock.Name = "CShiftlockButton"
+buttons.CShiftlock.Text = "Custom ShiftLock\n(Mobile & PC)"
+buttons.CShiftlock.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.CShiftlock.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.CShiftlock.Position = UDim2.new(0.345, 0, 0.85, 0)
+buttons.CShiftlock.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.CShiftlock.BorderSizePixel = 0
+buttons.CShiftlock.TextScaled = true
+buttons.CShiftlock.TextWrapped = true
+buttons.CShiftlock.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.CShiftlock.Parent = contentFrame
+
+constraints.CShiftlock = Instance.new("UITextSizeConstraint")
+constraints.CShiftlock.MaxTextSize = 14
+constraints.CShiftlock.MinTextSize = 8
+constraints.CShiftlock.Parent = buttons.CShiftlock
+
+corners.CShiftlock = Instance.new("UICorner")
+corners.CShiftlock.CornerRadius = UDim.new(0, 10)
+corners.CShiftlock.Parent = buttons.CShiftlock
 
 local sectionButtonTexts = {
     "Main",
@@ -2211,6 +2275,8 @@ for buttonText, sectionButton in pairs(sectionButtons) do
             buttons.LedgeClimbing.Visible = true
             buttons.LedgeClimber.Visible = true
             buttons.FullBright.Visible = true
+            buttons.AirWalk.Visible = true
+            buttons.FDShiftlock.Visible = true
             topBarLabel.Text = "Main"
         elseif buttonText == "TSB" then
             local tsbFrame = contentFrame:FindFirstChild("TSBFrame")
@@ -2561,6 +2627,12 @@ buttons.CShiftlock.MouseButton1Click:Connect(function()
     end)
 end)
 
+buttons.AirWalk.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Air-Walk/refs/heads/main/Source"))()
+    end)
+end)
+
 buttons.AntiFling.MouseButton1Click:Connect(function()
     isAntiFlingEnabled = not isAntiFlingEnabled
     if isNoClipEnabled then
@@ -2712,8 +2784,19 @@ buttons.FShiftlock.MouseButton1Click:Connect(function()
         EnableShiftlock()
         buttons.FShiftlock.Text = "Force ShiftLock: On\n(PC Only)"
     else
-        DisableShiftlock()
+        ResetShiftLock()
         buttons.FShiftlock.Text = "Force ShiftLock: Off\n(PC Only)"
+    end
+end)
+
+buttons.FDShiftlock.MouseButton1Click:Connect(function()
+    isShiftLockEnabled = not isShiftLockEnabled
+    if isShiftLockEnabled then
+        DisableShiftlock()
+        buttons.FDShiftlock.Text = "Disable ShiftLock: On\n(PC Only)"
+    else
+        ResetShiftLock()
+        buttons.FDShiftlock.Text = "Disable ShiftLock: Off\n(PC Only)"
     end
 end)
 
