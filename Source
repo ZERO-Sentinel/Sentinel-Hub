@@ -1,0 +1,2934 @@
+-- ============================================
+-- Sentinel Hub By ZΞRØ
+-- ============================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local StarterPlayer = game:GetService("StarterPlayer")
+local playerGui = player:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local camera = workspace.CurrentCamera
+local queueteleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+
+local buttons = {}
+local corners = {}
+local constraints = {}
+
+local menuConnection
+local menuKeyBind = nil
+local isBindingMenuKey = false
+local ignoreMenuToggleAfterBinding = false
+local originalCollision = {}
+local isAntiFlingEnabled = false
+local antifling
+local isNoClipEnabled = false
+local NoClipconnection = nil
+local isSentinelKept = true
+local isInfJumping = false
+local InfJump
+local saved = nil
+local isInfiniteZoomEnabled = false
+local isAirStrafeEnabled = false
+local isMomentumEnabled = false
+local isNoSlowEnabled = false
+local NoSlowSpeed = 16
+local isXRAYEnabled = false
+local thirdPersonState = 0
+local thirdPersonDistance = 15
+local firstPersonState = 0
+local savedCameraMode = nil
+local savedMinZoom = nil
+local savedMaxZoom = nil
+local savedCameraOffset = nil
+local isShiftLockEnabled = false
+local shiftLockConnection = nil
+local isCursorUnlocked = false
+local UnlockCursorConnection
+local UnlockCursorKeyBind = nil
+local isBindingUnlockCursorKey = false
+local ignoreUnlockCursorToggleAfterBinding = false
+local savedMouseBehavior = nil
+local savedMouseIconEnabled = nil
+local savedMouseBehavior
+local savedMouseIconEnabled
+local Drawings = {}
+local isBoxESP = false
+local isSkeletonESP = false
+local isChamsESP = false
+local TeamCheckESP = false
+local isLedgeClimbingEnabled = false
+local isLedgeClimberEnabled = false
+local WALL_DISTANCE = 3
+local MAX_LEDGE_HEIGHT = 3.5
+local MIN_LEDGE_HEIGHT = 0.5
+local isFullBrightEnabled = false
+local originalLighting = nil
+local FullBright = {Brightness = 2, ClockTime = 14, FogEnd = 100000, GlobalShadows = false, OutdoorAmbient = Color3.fromRGB(128, 128, 128)}
+local ScriptURL = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Sentinel-Hub/main/Source"))()'
+
+game.Players.LocalPlayer.OnTeleport:Connect(function(State)
+	if isSentinelKept and queueteleport then
+		queueteleport(ScriptURL)
+	end
+end)
+
+-- ============================================
+-- FUNCTIONS
+-- ============================================
+
+local function enableAntiFling()
+    if antifling then return end
+
+    antifling = RunService.Stepped:Connect(function()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= Players.LocalPlayer and player.Character then
+                for _, part in ipairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        if originalCollision[part] == nil then
+                            originalCollision[part] = part.CanCollide
+                        end
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function disableAntiFling()
+    if not antifling then return end
+    antifling:Disconnect()
+    antifling = nil
+    for part, originalState in pairs(originalCollision) do
+        if part.Parent then
+            part.CanCollide = originalState
+        end
+    end
+    table.clear(originalCollision)
+end
+
+local function enableNoClip()
+    if NoClipconnection then
+        NoClipconnection:Disconnect()
+        NoClipconnection = nil
+    end
+    NoClipconnection = RunService.Stepped:Connect(function()
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    if originalCollision[part] == nil then
+                        originalCollision[part] = part.CanCollide
+                    end
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+local function disableNoClip()
+    if NoClipconnection then
+        NoClipconnection:Disconnect()
+        NoClipconnection = nil
+    end
+    local character = game.Players.LocalPlayer.Character
+    if character then
+        for part, collide in pairs(originalCollision) do
+            if part and part.Parent then
+                part.CanCollide = collide
+            end
+        end
+    end
+    table.clear(originalCollision)
+end
+
+local function enableInfJump()
+    if InfJump then return end
+    local connections = {}
+    local jumpHeld = false
+    local function doJump()
+        if jumpHeld then
+            return
+        end
+        jumpHeld = true
+        local character = player.Character
+        if not character then
+            jumpHeld = false
+            return
+        end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then
+            jumpHeld = false
+            return
+        end
+        if humanoid:GetState() == Enum.HumanoidStateType.Dead then
+            jumpHeld = false
+            return
+        end
+        humanoid.Jump = false
+        humanoid.Jump = true
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        task.delay(0.05, function()
+            if character
+                and character.Parent
+                and humanoid.Parent == character
+                and humanoid.Health > 0 then
+
+                humanoid.Jump = false
+            end
+        end)
+    end
+    -- Computah
+    connections[#connections + 1] = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then
+            return
+        end
+        if input.KeyCode == Enum.KeyCode.Space then
+            doJump()
+        end
+    end)
+    connections[#connections + 1] = UserInputService.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.Space then
+            jumpHeld = false
+        end
+    end)
+    -- Mobile
+    task.spawn(function()
+        local touchGui = player.PlayerGui:WaitForChild("TouchGui", 10)
+        if not touchGui then return end
+        local touchControlFrame = touchGui:WaitForChild("TouchControlFrame", 10)
+        if not touchControlFrame then return end
+        local jumpButton = touchControlFrame:WaitForChild("JumpButton", 10)
+        if not jumpButton then return end
+        connections[#connections + 1] = jumpButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                doJump()
+            end
+        end)
+        connections[#connections + 1] = jumpButton.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                jumpHeld = false
+            end
+        end)
+    end)
+    InfJump = connections
+end
+
+local function disableInfJump()
+    if not InfJump then
+        return
+    end
+    for _, connection in ipairs(InfJump) do
+        if connection then
+            connection:Disconnect()
+        end
+    end
+    InfJump = nil
+end
+
+local function EnableInfiniteZoom()
+	if isInfiniteZoomEnabled then return end
+	isInfiniteZoomEnabled = true
+	if not saved then
+		saved = {
+			min = player.CameraMinZoomDistance,
+			max = player.CameraMaxZoomDistance,
+		}
+	end
+	player.CameraMinZoomDistance = 0
+	player.CameraMaxZoomDistance = 1e9
+end
+
+local function DisableInfiniteZoom()
+	if not isInfiniteZoomEnabled then return end
+	isInfiniteZoomEnabled = false
+	if saved then
+		player.CameraMinZoomDistance = saved.min
+		player.CameraMaxZoomDistance = saved.max
+	else
+		player.CameraMinZoomDistance = 0.5
+		player.CameraMaxZoomDistance = 400
+	end
+	saved = nil
+end
+
+local function ToggleAirStrafe()
+    isAirStrafeEnabled = not isAirStrafeEnabled
+end
+
+local function ToggleMomentum()
+    isMomentumEnabled = not isMomentumEnabled
+end
+
+local function GetHumanoidSpeed()
+    if player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            return humanoid.WalkSpeed
+        end
+    end
+    return 16
+end
+
+local function EnableNoSlow()
+    if player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = NoSlowSpeed
+        end
+    else
+        print('Error')
+    end
+end
+
+Players.LocalPlayer.CharacterAdded:Connect(function(character)
+    if isNoSlowEnabled then
+        EnableNoSlow()
+    end
+end)
+
+local function isAirborne(humanoid)
+    local state = humanoid:GetState()
+    return state == Enum.HumanoidStateType.Freefall
+        or state == Enum.HumanoidStateType.FallingDown
+        or state == Enum.HumanoidStateType.Jumping
+end
+
+local function onCharacterAdded(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    RunService.Heartbeat:Connect(function()
+        if not humanoid or not rootPart then return end
+        if isAirStrafeEnabled and (isMomentumEnabled or isNoSlowEnabled) then
+            local moveDir = humanoid.MoveDirection
+            if moveDir.Magnitude > 0.1 then
+                local horizontal = Vector3.new(moveDir.X, 0, moveDir.Z)
+                if horizontal.Magnitude > 0 then
+                    horizontal = horizontal.Unit
+                    local desiredVelocity = horizontal * humanoid.WalkSpeed
+                    rootPart.Velocity = Vector3.new(desiredVelocity.X, rootPart.Velocity.Y, desiredVelocity.Z)
+                end
+            else
+                rootPart.Velocity = Vector3.new(0, rootPart.Velocity.Y, 0)
+            end
+        end
+        if isAirStrafeEnabled and isAirborne(humanoid) then
+            local moveDir = humanoid.MoveDirection
+            if moveDir.Magnitude > 0.1 then
+                local horizontal = Vector3.new(moveDir.X, 0, moveDir.Z)
+                if horizontal.Magnitude > 0 then
+                    horizontal = horizontal.Unit
+                    local desiredVelocity = horizontal * humanoid.WalkSpeed
+                    rootPart.Velocity = Vector3.new(desiredVelocity.X, rootPart.Velocity.Y, desiredVelocity.Z)
+                end
+            else
+                rootPart.Velocity = Vector3.new(0, rootPart.Velocity.Y, 0)
+            end
+        end
+        if (isMomentumEnabled or isNoSlowEnabled) and humanoid.FloorMaterial ~= Enum.Material.Air then
+            local moveDir = humanoid.MoveDirection
+            if moveDir.Magnitude > 0.1 then
+                local horizontal = Vector3.new(moveDir.X, 0, moveDir.Z)
+                if horizontal.Magnitude > 0 then
+                    horizontal = horizontal.Unit
+                    local desiredVelocity = horizontal * humanoid.WalkSpeed
+                    rootPart.Velocity = Vector3.new(desiredVelocity.X, rootPart.Velocity.Y, desiredVelocity.Z)
+                end
+            else
+                rootPart.Velocity = Vector3.new(0, rootPart.Velocity.Y, 0)
+            end
+        end
+    end)
+end
+
+if player.Character then
+    onCharacterAdded(player.Character)
+end
+player.CharacterAdded:Connect(onCharacterAdded)
+
+local function UpdateXRAY()
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            local characterModel = v:FindFirstAncestorOfClass("Model")
+            local isCharacterPart = characterModel and characterModel:FindFirstChildOfClass("Humanoid")
+            if not isCharacterPart then
+                v.LocalTransparencyModifier = isXRAYEnabled and 0.5 or 0
+            end
+        end
+    end
+end
+
+local function EnableXRAY()
+    if isXRAYEnabled then return end
+    isXRAYEnabled = true
+    UpdateXRAY()
+end
+
+local function DisableXRAY()
+    if not isXRAYEnabled then return end
+    isXRAYEnabled = false
+    UpdateXRAY()
+end
+
+local function SaveCameraSettings()
+    savedCameraMode = player.CameraMode
+    savedMinZoom = player.CameraMinZoomDistance
+    savedMaxZoom = player.CameraMaxZoomDistance
+
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+    if humanoid then
+        savedCameraOffset = humanoid.CameraOffset
+    else
+        savedCameraOffset = Vector3.zero
+    end
+end
+
+local function ForceThirdPerson(distance)
+    distance = distance or 0
+    thirdPersonDistance = distance
+    if savedCameraMode == nil then
+        SaveCameraSettings()
+    end
+    player.CameraMode = Enum.CameraMode.Classic
+    player.CameraMinZoomDistance = 0
+    player.CameraMaxZoomDistance = 1000
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.CameraOffset = Vector3.new(0, 0, distance)
+end
+
+local function ForceThirdPersonCFrame(distance)
+    distance = distance or 15
+    thirdPersonDistance = distance
+    player.CameraMode = Enum.CameraMode.Classic
+    player.CameraMinZoomDistance = 0
+    player.CameraMaxZoomDistance = 1000
+end
+
+local function DisableThirdPerson()
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.CameraOffset = savedCameraOffset or Vector3.zero
+    end
+    if savedCameraMode ~= nil then
+        player.CameraMode = savedCameraMode
+    end
+    if savedMinZoom ~= nil then
+        player.CameraMinZoomDistance = savedMinZoom
+    end
+    if savedMaxZoom ~= nil then
+        player.CameraMaxZoomDistance = savedMaxZoom
+    end
+    savedCameraMode = nil
+    savedMinZoom = nil
+    savedMaxZoom = nil
+    savedCameraOffset = nil
+end
+
+local function ForceFirstPerson()
+    if savedCameraMode == nil then
+        SaveCameraSettings()
+    end
+    player.CameraMode = Enum.CameraMode.LockFirstPerson
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.CameraOffset = Vector3.zero
+    end
+end
+
+local function ForceFirstPersonCFrame()
+    player.CameraMode = Enum.CameraMode.Classic
+    player.CameraMinZoomDistance = 0
+    player.CameraMaxZoomDistance = 0
+end
+
+local function DisableFirstPerson()
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.CameraOffset = savedCameraOffset or Vector3.zero
+    end
+    if savedCameraMode ~= nil then
+        player.CameraMode = savedCameraMode
+    end
+    if savedMinZoom ~= nil then
+        player.CameraMinZoomDistance = savedMinZoom
+    end
+    if savedMaxZoom ~= nil then
+        player.CameraMaxZoomDistance = savedMaxZoom
+    end
+    savedCameraMode = nil
+    savedMinZoom = nil
+    savedMaxZoom = nil
+    savedCameraOffset = nil
+end
+
+local function EnableShiftlock()
+    player.DevEnableMouseLock = true
+    if shiftLockConnection then
+        shiftLockConnection:Disconnect()
+    end
+    shiftLockConnection = player:GetPropertyChangedSignal(
+        "DevEnableMouseLock"
+    ):Connect(function()
+        if isShiftLockEnabled then
+            player.DevEnableMouseLock = true
+        end
+    end)
+end
+
+local function DisableShiftlock()
+    if shiftLockConnection then
+        shiftLockConnection:Disconnect()
+        shiftLockConnection = nil
+    end
+    player.DevEnableMouseLock = false
+end
+
+local function ToggleCursor()
+    if isCursorUnlocked then
+        savedMouseBehavior = UserInputService.MouseBehavior
+        savedMouseIconEnabled = UserInputService.MouseIconEnabled
+        UserInputService.MouseIconEnabled = true
+        if not UnlockCursorConnection then
+            UnlockCursorConnection = true
+            RunService:BindToRenderStep(
+                "ForceCursorUnlock",
+                Enum.RenderPriority.Camera.Value + 1,
+                function()
+                    if isCursorUnlocked then
+                        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+                        UserInputService.MouseIconEnabled = true
+                    end
+                end
+            )
+        end
+    else
+        if UnlockCursorConnection then
+            UnlockCursorConnection = false
+            RunService:UnbindFromRenderStep("ForceCursorUnlock")
+        end
+        if savedMouseBehavior ~= nil then
+            UserInputService.MouseBehavior = savedMouseBehavior
+        end
+        if savedMouseIconEnabled ~= nil then
+            UserInputService.MouseIconEnabled = savedMouseIconEnabled
+        end
+        savedMouseBehavior = nil
+        savedMouseIconEnabled = nil
+    end
+end
+
+local function IsSameTeam(ESPTarget)
+    if not ESPTarget or ESPTarget == player then
+        return false
+    end
+    if player.Team and ESPTarget.Team then
+        return player.Team == ESPTarget.Team
+    end
+    if player.TeamColor and ESPTarget.TeamColor then
+        return player.TeamColor == ESPTarget.TeamColor
+    end
+    return false
+end
+
+local function HidePlayerDrawings(ESPTarget)
+    for key, drawing in pairs(Drawings) do
+        if string.sub(key, 1, #ESPTarget.Name) == ESPTarget.Name then
+            drawing.Visible = false
+        end
+    end
+end
+
+local function GetBoundingBox(character)
+    local parts = {
+        "Head", "UpperTorso", "LowerTorso", "Torso",
+        "LeftUpperArm", "RightUpperArm", "LeftArm", "RightArm",
+        "LeftUpperLeg", "RightUpperLeg", "LeftLeg", "RightLeg",
+        "LeftFoot", "RightFoot"
+    }
+    local points = {}
+
+    for _, partName in ipairs(parts) do
+        local part = character:FindFirstChild(partName)
+        if part and part:IsA("BasePart") then
+            local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                table.insert(points, Vector2.new(screenPos.X, screenPos.Y))
+            end
+        end
+    end
+
+    if #points == 0 then
+        return nil
+    end
+
+    local minX, minY = points[1].X, points[1].Y
+    local maxX, maxY = minX, minY
+    for i = 2, #points do
+        local point = points[i]
+        if point.X < minX then minX = point.X end
+        if point.Y < minY then minY = point.Y end
+        if point.X > maxX then maxX = point.X end
+        if point.Y > maxY then maxY = point.Y end
+    end
+
+    return minX - 4, minY - 4, (maxX - minX) + 8, (maxY - minY) + 8
+end
+
+local function CreateOrGetDrawing(key, kind)
+    if Drawings[key] and Drawings[key].Visible ~= nil then
+        return Drawings[key]
+    end
+    local drawing = Drawing.new(kind)
+    Drawings[key] = drawing
+    return drawing
+end
+
+local function DrawESP(ESPTarget)
+    if ESPTarget == player or not player.Character then
+        return
+    end
+
+    if TeamCheckESP and IsSameTeam(ESPTarget) then
+        HidePlayerDrawings(ESPTarget)
+        return
+    end
+
+    local character = ESPTarget.Character
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        HidePlayerDrawings(ESPTarget)
+        return
+    end
+
+    local rootPos, onScreen = camera:WorldToViewportPoint(humanoidRootPart.Position)
+    if not onScreen then
+        HidePlayerDrawings(ESPTarget)
+        return
+    end
+
+    if isBoxESP then
+        local left, top, width, height = GetBoundingBox(character)
+        if left and top and width and height then
+            local box = CreateOrGetDrawing(ESPTarget.Name .. "Box", "Square")
+            box.Position = Vector2.new(left, top)
+            box.Size = Vector2.new(math.max(width, 10), math.max(height, 10))
+            box.Color = Color3.fromRGB(255,255,255)
+            box.Thickness = 2
+            box.Filled = false
+            box.Visible = true
+        else
+            if Drawings[ESPTarget.Name .. "Box"] then
+                Drawings[ESPTarget.Name .. "Box"].Visible = false
+            end
+        end
+    else
+        if Drawings[ESPTarget.Name .. "Box"] then
+            Drawings[ESPTarget.Name .. "Box"].Visible = false
+        end
+    end
+
+    if isSkeletonESP then
+        local parts = {
+            Head = character:FindFirstChild("Head"),
+            UpperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso"),
+            LowerTorso = character:FindFirstChild("LowerTorso") or character:FindFirstChild("Torso"),
+            LeftArm = character:FindFirstChild("LeftUpperArm") or character:FindFirstChild("Left Arm"),
+            RightArm = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm"),
+            LeftLeg = character:FindFirstChild("LeftUpperLeg") or character:FindFirstChild("Left Leg"),
+            RightLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg")
+        }
+
+        local connections = {
+            {"Head", "UpperTorso"},
+            {"UpperTorso", "LowerTorso"},
+            {"UpperTorso", "LeftArm"},
+            {"UpperTorso", "RightArm"},
+            {"LowerTorso", "LeftLeg"},
+            {"LowerTorso", "RightLeg"}
+        }
+
+        for _, conn in ipairs(connections) do
+            local partA = parts[conn[1]]
+            local partB = parts[conn[2]]
+            local lineKey = ESPTarget.Name .. conn[1] .. conn[2]
+
+            if partA and partB then
+                local posA, visibleA = camera:WorldToViewportPoint(partA.Position)
+                local posB, visibleB = camera:WorldToViewportPoint(partB.Position)
+                if visibleA and visibleB then
+                    local line = CreateOrGetDrawing(lineKey, "Line")
+                    line.From = Vector2.new(posA.X, posA.Y)
+                    line.To = Vector2.new(posB.X, posB.Y)
+                    line.Color = Color3.fromRGB(255,255,255)
+                    line.Thickness = 2
+                    line.Visible = true
+                else
+                    if Drawings[lineKey] then
+                        Drawings[lineKey].Visible = false
+                    end
+                end
+            else
+                if Drawings[lineKey] then
+                    Drawings[lineKey].Visible = false
+                end
+            end
+        end
+    else
+        for _, conn in ipairs({"HeadUpperTorso", "UpperTorsoLowerTorso", "UpperTorsoLeftArm", "UpperTorsoRightArm", "LowerTorsoLeftLeg", "LowerTorsoRightLeg"}) do
+            if Drawings[ESPTarget.Name .. conn] then
+                Drawings[ESPTarget.Name .. conn].Visible = false
+            end
+        end
+    end
+
+    if isChamsESP then
+        local chams = CoreGui:FindFirstChild(ESPTarget.Name .. "Chams")
+        if not chams then
+            chams = Instance.new("Highlight")
+            chams.Name = ESPTarget.Name .. "Chams"
+            chams.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            chams.OutlineTransparency = 1
+            chams.Parent = CoreGui
+        end
+        chams.Adornee = character
+        chams.FillColor = Color3.fromRGB(255, 255, 255)
+        chams.FillTransparency = 0.3
+    else
+        local chams = CoreGui:FindFirstChild(ESPTarget.Name .. "Chams")
+        if chams then
+            chams:Destroy()
+        end
+    end
+end
+
+local function getCharacter()
+    return player.Character
+end
+
+local function getRoot()
+    local character = getCharacter()
+    if not character then
+        return nil
+    end
+    return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function playLedgeAnimation()
+    local character = getCharacter()
+    if not character then
+        return nil
+    end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        return nil
+    end
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = humanoid
+    end
+    local animation = Instance.new("Animation")
+    animation.AnimationId = "rbxassetid://180436334"
+    local track = animator:LoadAnimation(animation)
+    track.Priority = Enum.AnimationPriority.Action
+    track.Looped = false
+    track:Play()
+    return track
+end
+
+local function getRaycastParams()
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local excluded = {}
+    local character = getCharacter()
+    if character then
+        table.insert(excluded, character)
+    end
+    for _, otherPlayer in ipairs(Players:GetPlayers()) do
+        if otherPlayer.Character then
+            table.insert(excluded, otherPlayer.Character)
+        end
+    end
+    params.FilterDescendantsInstances = excluded
+    return params
+end
+
+local function findLedge()
+    local root = getRoot()
+    if not root then
+        return nil
+    end
+    local origin = root.Position
+    local wallParams = getRaycastParams()
+    local wallResult = workspace:Raycast(origin, root.CFrame.LookVector * WALL_DISTANCE, wallParams)
+    if not wallResult then
+        return nil
+    end
+    local topOrigin = wallResult.Position + Vector3.new(0, MAX_LEDGE_HEIGHT, 0)
+    local topResult = workspace:Raycast(topOrigin, Vector3.new(0, -MAX_LEDGE_HEIGHT - 1, 0), wallParams)
+    if not topResult then
+        return nil
+    end
+    local height = topResult.Position.Y - root.Position.Y
+    if height < MIN_LEDGE_HEIGHT or height > MAX_LEDGE_HEIGHT then
+        return nil
+    end
+    return {
+        wall = wallResult,
+        top = topResult,
+        height = height
+    }
+end
+
+local grabbing = false
+
+local function grabLedge(ledge)
+    if grabbing then
+        return
+    end
+    local root = getRoot()
+    local character = getCharacter()
+    if not root or not character then
+        return
+    end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        return
+    end
+    grabbing = true
+    local topPosition = ledge.top.Position
+    local wallNormal = ledge.wall.Normal
+    local targetPosition = topPosition + Vector3.new(0, 3, 0) - wallNormal * 0.8
+    local targetCFrame = CFrame.lookAt(targetPosition, targetPosition - wallNormal)
+    local oldAutoRotate = humanoid.AutoRotate
+    humanoid.AutoRotate = false
+    local track = playLedgeAnimation()
+    local startCFrame = root.CFrame
+    local duration = 0.35
+    local startTime = tick()
+    while tick() - startTime < duration do
+        local alpha = (tick() - startTime) / duration
+        alpha = alpha * alpha * (3 - 2 * alpha)
+        root.CFrame = startCFrame:Lerp(targetCFrame, alpha)
+        RunService.RenderStepped:Wait()
+    end
+    root.CFrame = targetCFrame
+    if track then
+        track:Stop(0.1)
+        track:Destroy()
+    end
+    local shiftLockEnabled = false
+    pcall(function()
+        shiftLockEnabled = player.DevEnableMouseLock
+            and UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+    end)
+    if shiftLockEnabled then
+        local cameraLook = camera.CFrame.LookVector
+        local flatLook = Vector3.new(cameraLook.X, 0, cameraLook.Z)
+        if flatLook.Magnitude > 0.001 then
+            flatLook = flatLook.Unit
+            local finalCFrame = CFrame.lookAt(root.Position, root.Position + flatLook)
+            local smoothDuration = 0.12
+            local smoothStart = tick()
+            local startRotation = root.CFrame.Rotation
+            while tick() - smoothStart < smoothDuration do
+                local alpha = (tick() - smoothStart) / smoothDuration
+                alpha = alpha * alpha * (3 - 2 * alpha)
+                local rotation = startRotation:Lerp( finalCFrame.Rotation, alpha)
+                root.CFrame = CFrame.new(root.Position) * rotation
+                RunService.RenderStepped:Wait()
+            end
+            root.CFrame = finalCFrame
+        end
+    end
+    humanoid.AutoRotate = oldAutoRotate
+    grabbing = false
+end
+
+local function saveOriginalLighting()
+	if not originalLighting then
+		originalLighting = {
+			Brightness = Lighting.Brightness,
+			ClockTime = Lighting.ClockTime,
+			FogEnd = Lighting.FogEnd,
+			GlobalShadows = Lighting.GlobalShadows,
+			OutdoorAmbient = Lighting.OutdoorAmbient
+		}
+	end
+end
+
+local function applyFullbright()
+	Lighting.Brightness = 2
+	Lighting.ClockTime = 14
+	Lighting.FogEnd = 100000
+	Lighting.GlobalShadows = false
+	Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+end
+
+local function restoreLighting()
+	if originalLighting then
+		Lighting.Brightness = originalLighting.Brightness
+		Lighting.ClockTime = originalLighting.ClockTime
+		Lighting.FogEnd = originalLighting.FogEnd
+		Lighting.GlobalShadows = originalLighting.GlobalShadows
+		Lighting.OutdoorAmbient = originalLighting.OutdoorAmbient
+
+		originalLighting = nil
+	end
+end
+
+-- ============================================
+-- LOOPED FUNCTIONS
+-- ============================================
+
+RunService.RenderStepped:Connect(function()
+    if isNoSlowEnabled then
+        EnableNoSlow()
+    end
+    if thirdPersonState == 2 then
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local direction = camera.CFrame.LookVector
+            local cameraHeight = 2
+            camera.CFrame = CFrame.lookAt(
+                root.Position - direction * thirdPersonDistance + Vector3.new(0, cameraHeight, 0),
+                root.Position + Vector3.new(0, cameraHeight, 0)
+            )
+        end
+    end
+    if firstPersonState == 2 then
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local direction = camera.CFrame.LookVector
+            camera.CFrame = CFrame.lookAt(
+                root.Position,
+                root.Position
+            )
+        end
+    end
+    if isBoxESP or isSkeletonESP or isChamsESP then
+        for _, ESPTarget in ipairs(Players:GetPlayers()) do
+            DrawESP(ESPTarget)
+        end
+    else
+        for _, drawing in pairs(Drawings) do
+            drawing.Visible = false
+        end
+        for _, ESPTarget in ipairs(Players:GetPlayers()) do
+            local chams = CoreGui:FindFirstChild(ESPTarget.Name .. "Chams")
+            if chams then
+                chams:Destroy()
+            end
+        end
+    end
+    if isFullBrightEnabled then
+	    if Lighting.Brightness ~= FullBright.Brightness
+	    	or Lighting.ClockTime ~= FullBright.ClockTime
+	    	or Lighting.FogEnd ~= FullBright.FogEnd
+	    	or Lighting.GlobalShadows ~= FullBright.GlobalShadows
+	    	or Lighting.OutdoorAmbient ~= FullBright.OutdoorAmbient then
+	    	applyFullbright()
+	    end
+    end
+    if not isLedgeClimberEnabled then
+        return
+    end
+    if grabbing then
+        return
+    end
+    local ledge = findLedge()
+    if not ledge then
+        return
+    end
+    if ledge.height >= MIN_LEDGE_HEIGHT
+        and ledge.height <= MAX_LEDGE_HEIGHT then
+        grabLedge(ledge)
+    end
+end)
+
+-- ============================================
+-- UNLOAD FEATURES
+-- ============================================
+
+local features = {
+    AntiFling = {
+        enabled = function() return isAntiFlingEnabled end,
+        disable = function()
+            isAntiFlingEnabled = false
+            disableAntiFling()
+        end
+    },
+    NoClip = {
+        enabled = function() return isNoClipEnabled end,
+        disable = function()
+            isNoClipEnabled = false
+            disableNoClip()
+        end
+    },
+    InfJump = {
+        enabled = function() return isInfJumping end,
+        disable = function()
+            isInfJumping = false
+            disableInfJump()
+        end
+    },
+    InfiniteZoom = {
+        enabled = function() return isInfiniteZoomEnabled end,
+        disable = function()
+            isInfiniteZoomEnabled = false
+            DisableInfiniteZoom()
+        end
+    },
+    AirStrafe = {
+        enabled = function() return isAirStrafeEnabled end,
+        disable = function()
+            isAirStrafeEnabled = false
+        end
+    },
+    Momentum = {
+        enabled = function() return isMomentumEnabled end,
+        disable = function()
+            isMomentumEnabled = false
+        end
+    },
+    NoSlow = {
+        enabled = function() return isNoSlowEnabled end,
+        disable = function()
+            isNoSlowEnabled = false
+        end
+    },
+    XRAY = {
+        enabled = function() return isXRAYEnabled end,
+        disable = function()
+            isXRAYEnabled = false
+            DisableXRAY()
+        end
+    },
+    ThirdPerson = {
+        enabled = function() return thirdPersonState ~= 0 end,
+        disable = function()
+            thirdPersonState = 0
+            DisableThirdPerson()
+        end
+    },
+    FirstPerson = {
+        enabled = function() return firstPersonState ~= 0 end,
+        disable = function()
+            firstPersonState = 0
+            DisableFirstPerson()
+        end
+    },
+    UnlockCursor = {
+        enabled = function() return isCursorUnlocked end,
+        disable = function()
+            isCursorUnlocked = false
+            ToggleCursor()
+        end
+    },
+    ESP = {
+        enabled = function() return isSkeletonESP or isBoxESP or isChamsESP end,
+        disable = function()
+            isSkeletonESP = false
+            isBoxESP = false
+            isChamsESP = false
+        end
+    },
+    TeamCheck = {
+        enabled = function() return TeamCheckESP end,
+        disable = function()
+            TeamCheckESP = false
+        end
+    },
+    LedgeClimbing = {
+        enabled = function() return isLedgeClimbingEnabled end,
+        disable = function()
+            isLedgeClimbingEnabled = false
+        end
+    },
+    LedgeClimber = {
+        enabled = function() return isLedgeClimberEnabled end,
+        disable = function()
+            isLedgeClimberEnabled = false
+        end
+    },
+    FullBright = {
+        enabled = function() return isFullBrightEnabled end,
+        disable = function()
+            isFullBrightEnabled = false
+            restoreLighting()
+        end
+    }
+}
+
+-- ============================================
+-- UI CREATION
+-- ============================================
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ModernMenuGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui
+
+local menuBlur = Instance.new("BlurEffect")
+menuBlur.Name = "MenuBlur"
+menuBlur.Size = 0
+menuBlur.Parent = Lighting
+
+local menuFrame = Instance.new("Frame")
+menuFrame.Name = "ModernMenu"
+menuFrame.Size = UDim2.new(0.72, 0, 0.78, 0)
+menuFrame.Position = UDim2.new(0.14, 0, 0.11, 0)
+menuFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+menuFrame.BackgroundTransparency = 0.12
+menuFrame.BorderSizePixel = 0
+menuFrame.ZIndex = 1
+menuFrame.Visible = false
+menuFrame.Parent = screenGui
+
+local menuCorner = Instance.new("UICorner")
+menuCorner.CornerRadius = UDim.new(0, 22)
+menuCorner.Parent = menuFrame
+
+local menuBlur2 = Instance.new("Frame")
+menuBlur2.Name = "menuBlur2"
+menuBlur2.Size = UDim2.new(1, 0, 1, 0)
+menuBlur2.Position = UDim2.new(0, 0, 0, 0)
+menuBlur2.ZIndex = 18
+menuBlur2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+menuBlur2.BackgroundTransparency = 0.15
+menuBlur2.Visible = false
+menuBlur2.Parent = menuFrame
+
+local menuBlur2Corner = Instance.new("UICorner")
+menuBlur2Corner.CornerRadius = UDim.new(0, 22)
+menuBlur2Corner.Parent = menuBlur2
+
+local inputBlocker = Instance.new("TextButton")
+inputBlocker.Name = "InputBlocker"
+inputBlocker.Size = UDim2.fromScale(1, 1)
+inputBlocker.Position = UDim2.fromScale(0, 0)
+inputBlocker.BackgroundTransparency = 1
+inputBlocker.Text = ""
+inputBlocker.AutoButtonColor = false
+inputBlocker.ZIndex = menuBlur2.ZIndex
+inputBlocker.Visible = false
+inputBlocker.Parent = menuBlur2
+
+local topBarLabel = Instance.new("TextLabel")
+topBarLabel.Name = "TopBarLabel"
+topBarLabel.Size = UDim2.new(0.6, 0, 0.06, 0)
+topBarLabel.Position = UDim2.new(0.2, 0, 0.01, 0)
+topBarLabel.BackgroundTransparency = 1
+topBarLabel.Text = "Main"
+topBarLabel.TextColor3 = Color3.fromRGB(255,255,255)
+topBarLabel.TextScaled = true
+topBarLabel.TextWrapped = false
+topBarLabel.TextXAlignment = Enum.TextXAlignment.Center
+topBarLabel.TextYAlignment = Enum.TextYAlignment.Center
+local TopBarConstraint = Instance.new("UITextSizeConstraint")
+TopBarConstraint.MaxTextSize = 40
+TopBarConstraint.MinTextSize = 20
+TopBarConstraint.Parent = topBarLabel
+topBarLabel.Parent = menuFrame
+
+local wardFrame = Instance.new("Frame")
+wardFrame.Name = "WardFrame"
+wardFrame.Size = UDim2.new(0.25, 0, 0.71, 0)
+wardFrame.Position = UDim2.new(0.375, 0, 0.05, 0)
+wardFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+wardFrame.BackgroundTransparency = 1
+wardFrame.BorderSizePixel = 0
+wardFrame.Visible = false
+wardFrame.ZIndex = 21
+wardFrame.Parent = menuFrame
+
+local wardCorner = Instance.new("UICorner")
+wardCorner.CornerRadius = UDim.new(0, 12)
+wardCorner.Parent = wardFrame
+
+local wardListLayout = Instance.new("UIListLayout")
+wardListLayout.Padding = UDim.new(0, 12)
+wardListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+wardListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+wardListLayout.Parent = wardFrame
+
+local wardPadding = Instance.new("UIPadding")
+wardPadding.PaddingLeft = UDim.new(0, 8)
+wardPadding.PaddingRight = UDim.new(0, 8)
+wardPadding.PaddingTop = UDim.new(0, 120)
+wardPadding.PaddingBottom = UDim.new(0, 0)
+wardPadding.Parent = wardFrame
+
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(0.72 - 0.25 - 0.02, 0, 0.85, 0)
+contentFrame.Position = UDim2.new(0.25 + 0.02, 0, 0.11 + 0.06, 0)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = menuFrame
+
+-- ============================================
+-- BUTTONS
+-- ============================================
+
+buttons.Open = Instance.new("ImageButton")
+buttons.Open.Name = "OpenMenuButton"
+buttons.Open.Image = "rbxassetid://86826303307578"
+buttons.Open.ImageColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Open.ScaleType = Enum.ScaleType.Fit
+buttons.Open.Size = UDim2.new(0, 48, 0, 48)
+buttons.Open.Position = UDim2.new(0, 20, 0, 380)
+buttons.Open.ZIndex = 2147483647
+buttons.Open.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+buttons.Open.BackgroundTransparency = 0
+buttons.Open.BorderSizePixel = 0
+buttons.Open.AutoButtonColor = true
+buttons.Open.Parent = screenGui
+
+corners.Open = Instance.new("UICorner")
+corners.Open.CornerRadius = UDim.new(0, 14)
+corners.Open.Parent = buttons.Open
+
+buttons.Close = Instance.new("TextButton")
+buttons.Close.Name = "CloseButton"
+buttons.Close.Text = "X"
+buttons.Close.AnchorPoint = Vector2.new(1, 0)
+buttons.Close.Size = UDim2.new(0.036, 0, 0.036, 0)
+buttons.Close.Position = UDim2.new(0.99, 0, 0.015, 0)
+buttons.Close.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Close.BorderSizePixel = 0
+buttons.Close.TextSize = 24
+buttons.Close.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Close.ZIndex = 20
+buttons.Close.Parent = menuFrame
+
+constraints.Close = Instance.new("UITextSizeConstraint")
+constraints.Close.MaxTextSize = 16
+constraints.Close.MinTextSize = 10
+constraints.Close.Parent = buttons.Close
+
+corners.Close = Instance.new("UICorner")
+corners.Close.CornerRadius = UDim.new(0, 10)
+corners.Close.Parent = buttons.Close
+
+buttons.Hamburger = Instance.new("TextButton")
+buttons.Hamburger.Name = "HamburgerButton"
+buttons.Hamburger.Text = "Ξ"
+buttons.Hamburger.AnchorPoint = Vector2.new(0, 0)
+buttons.Hamburger.Size = UDim2.new(0.04, 0, 0.04, 0)
+buttons.Hamburger.Position = UDim2.new(0.01, 0, 0.015, 0)
+buttons.Hamburger.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Hamburger.BorderSizePixel = 0
+buttons.Hamburger.TextSize = 24
+buttons.Hamburger.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Hamburger.ZIndex = 20
+buttons.Hamburger.Parent = menuFrame
+
+constraints.Hamburger = Instance.new("UITextSizeConstraint")
+constraints.Hamburger.MaxTextSize = 16
+constraints.Hamburger.MinTextSize = 10
+constraints.Hamburger.Parent = buttons.Hamburger
+
+corners.Hamburger = Instance.new("UICorner")
+corners.Hamburger.CornerRadius = UDim.new(0, 10)
+corners.Hamburger.Parent = buttons.Hamburger
+
+buttons.IY = Instance.new("TextButton")
+buttons.IY.Name = "IYButton"
+buttons.IY.Text = "Infinite Yield"
+buttons.IY.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.IY.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.IY.Position = UDim2.new(-0.365, 0, -0.05, 0)
+buttons.IY.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.IY.BorderSizePixel = 0
+buttons.IY.TextScaled = true
+buttons.IY.TextWrapped = true
+buttons.IY.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.IY.Parent = contentFrame
+
+constraints.IY = Instance.new("UITextSizeConstraint")
+constraints.IY.MaxTextSize = 14
+constraints.IY.MinTextSize = 8
+constraints.IY.Parent = buttons.IY
+
+corners.IY = Instance.new("UICorner")
+corners.IY.CornerRadius = UDim.new(0, 10)
+corners.IY.Parent = buttons.IY
+
+buttons.Crypton = Instance.new("TextButton")
+buttons.Crypton.Name = "CryptonButton"
+buttons.Crypton.Text = "Crypton\n(PC Only)"
+buttons.Crypton.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.Crypton.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.Crypton.Position = UDim2.new(-0.010, 0, -0.05, 0)
+buttons.Crypton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Crypton.BorderSizePixel = 0
+buttons.Crypton.TextScaled = true
+buttons.Crypton.TextWrapped = true
+buttons.Crypton.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Crypton.Parent = contentFrame
+
+constraints.Crypton = Instance.new("UITextSizeConstraint")
+constraints.Crypton.MaxTextSize = 14
+constraints.Crypton.MinTextSize = 8
+constraints.Crypton.Parent = buttons.Crypton
+
+corners.Crypton = Instance.new("UICorner")
+corners.Crypton.CornerRadius = UDim.new(0, 10)
+corners.Crypton.Parent = buttons.Crypton
+
+buttons.Emotes = Instance.new("TextButton")
+buttons.Emotes.Name = "EmotesButton"
+buttons.Emotes.Text = "Emote Menu\n(R15 Only)"
+buttons.Emotes.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.Emotes.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.Emotes.Position = UDim2.new(0.345, 0, -0.05, 0)
+buttons.Emotes.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Emotes.BorderSizePixel = 0
+buttons.Emotes.TextScaled = true
+buttons.Emotes.TextWrapped = true
+buttons.Emotes.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Emotes.Parent = contentFrame
+
+constraints.Emotes = Instance.new("UITextSizeConstraint")
+constraints.Emotes.MaxTextSize = 14
+constraints.Emotes.MinTextSize = 8
+constraints.Emotes.Parent = buttons.Emotes
+
+corners.Emotes = Instance.new("UICorner")
+corners.Emotes.CornerRadius = UDim.new(0, 10)
+corners.Emotes.Parent = buttons.Emotes
+
+buttons.TouchFling = Instance.new("TextButton")
+buttons.TouchFling.Name = "TouchFlingButton"
+buttons.TouchFling.Text = "Touch Fling"
+buttons.TouchFling.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.TouchFling.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.TouchFling.Position = UDim2.new(0.70, 0, -0.05, 0)
+buttons.TouchFling.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.TouchFling.BorderSizePixel = 0
+buttons.TouchFling.TextScaled = true
+buttons.TouchFling.TextWrapped = true
+buttons.TouchFling.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.TouchFling.Parent = contentFrame
+
+constraints.TouchFling = Instance.new("UITextSizeConstraint")
+constraints.TouchFling.MaxTextSize = 14
+constraints.TouchFling.MinTextSize = 8
+constraints.TouchFling.Parent = buttons.TouchFling
+
+corners.TouchFling = Instance.new("UICorner")
+corners.TouchFling.CornerRadius = UDim.new(0, 10)
+corners.TouchFling.Parent = buttons.TouchFling
+
+buttons.LoopFling = Instance.new("TextButton")
+buttons.LoopFling.Name = "LoopFlingButton"
+buttons.LoopFling.Text = "Loop Fling\nMenu"
+buttons.LoopFling.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.LoopFling.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.LoopFling.Position = UDim2.new(1.055, 0, -0.05, 0)
+buttons.LoopFling.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.LoopFling.BorderSizePixel = 0
+buttons.LoopFling.TextScaled = true
+buttons.LoopFling.TextWrapped = true
+buttons.LoopFling.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.LoopFling.Parent = contentFrame
+
+constraints.LoopFling = Instance.new("UITextSizeConstraint")
+constraints.LoopFling.MaxTextSize = 14
+constraints.LoopFling.MinTextSize = 8
+constraints.LoopFling.Parent = buttons.LoopFling
+
+corners.LoopFling = Instance.new("UICorner")
+corners.LoopFling.CornerRadius = UDim.new(0, 10)
+corners.LoopFling.Parent = buttons.LoopFling
+
+buttons.AntiFling = Instance.new("TextButton")
+buttons.AntiFling.Name = "AntiFlingButton"
+buttons.AntiFling.Text = "Anti Fling: Off"
+buttons.AntiFling.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.AntiFling.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.AntiFling.Position = UDim2.new(1.41, 0, -0.05, 0)
+buttons.AntiFling.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.AntiFling.BorderSizePixel = 0
+buttons.AntiFling.TextScaled = true
+buttons.AntiFling.TextWrapped = true
+buttons.AntiFling.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.AntiFling.Parent = contentFrame
+
+constraints.AntiFling = Instance.new("UITextSizeConstraint")
+constraints.AntiFling.MaxTextSize = 14
+constraints.AntiFling.MinTextSize = 8
+constraints.AntiFling.Parent = buttons.AntiFling
+
+corners.AntiFling = Instance.new("UICorner")
+corners.AntiFling.CornerRadius = UDim.new(0, 10)
+corners.AntiFling.Parent = buttons.AntiFling
+
+buttons.DanyadsFling = Instance.new("TextButton")
+buttons.DanyadsFling.Name = "DanyadsFlingButton"
+buttons.DanyadsFling.Text = "Danyad's Fling\n(Permanent)"
+buttons.DanyadsFling.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.DanyadsFling.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.DanyadsFling.Position = UDim2.new(-0.365, 0, 0.1, 0)
+buttons.DanyadsFling.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.DanyadsFling.BorderSizePixel = 0
+buttons.DanyadsFling.TextScaled = true
+buttons.DanyadsFling.TextWrapped = true
+buttons.DanyadsFling.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.DanyadsFling.Parent = contentFrame
+
+constraints.DanyadsFling = Instance.new("UITextSizeConstraint")
+constraints.DanyadsFling.MaxTextSize = 14
+constraints.DanyadsFling.MinTextSize = 8
+constraints.DanyadsFling.Parent = buttons.DanyadsFling
+
+corners.DanyadsFling = Instance.new("UICorner")
+corners.DanyadsFling.CornerRadius = UDim.new(0, 10)
+corners.DanyadsFling.Parent = buttons.DanyadsFling
+
+buttons.Fly = Instance.new("TextButton")
+buttons.Fly.Name = "FlyButton"
+buttons.Fly.Text = "Fly"
+buttons.Fly.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.Fly.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.Fly.Position = UDim2.new(-0.010, 0, 0.1, 0)
+buttons.Fly.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Fly.BorderSizePixel = 0
+buttons.Fly.TextScaled = true
+buttons.Fly.TextWrapped = true
+buttons.Fly.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Fly.Parent = contentFrame
+
+constraints.Fly = Instance.new("UITextSizeConstraint")
+constraints.Fly.MaxTextSize = 14
+constraints.Fly.MinTextSize = 8
+constraints.Fly.Parent = buttons.Fly
+
+corners.Fly = Instance.new("UICorner")
+corners.Fly.CornerRadius = UDim.new(0, 10)
+corners.Fly.Parent = buttons.Fly
+
+buttons.Speed = Instance.new("TextButton")
+buttons.Speed.Name = "SpeedButton"
+buttons.Speed.Text = "Speed Hack"
+buttons.Speed.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.Speed.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.Speed.Position = UDim2.new(0.345, 0, 0.1, 0)
+buttons.Speed.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Speed.BorderSizePixel = 0
+buttons.Speed.TextScaled = true
+buttons.Speed.TextWrapped = true
+buttons.Speed.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Speed.Parent = contentFrame
+
+constraints.Speed = Instance.new("UITextSizeConstraint")
+constraints.Speed.MaxTextSize = 14
+constraints.Speed.MinTextSize = 8
+constraints.Speed.Parent = buttons.Speed
+
+corners.Speed = Instance.new("UICorner")
+corners.Speed.CornerRadius = UDim.new(0, 10)
+corners.Speed.Parent = buttons.Speed
+
+buttons.SimpleAdminMenu = Instance.new("TextButton")
+buttons.SimpleAdminMenu.Name = "SimpleAdminMenuButton"
+buttons.SimpleAdminMenu.Text = "Simple Admin\nMenu"
+buttons.SimpleAdminMenu.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.SimpleAdminMenu.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.SimpleAdminMenu.Position = UDim2.new(0.700, 0, 0.1, 0)
+buttons.SimpleAdminMenu.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.SimpleAdminMenu.BorderSizePixel = 0
+buttons.SimpleAdminMenu.TextScaled = true
+buttons.SimpleAdminMenu.TextWrapped = true
+buttons.SimpleAdminMenu.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.SimpleAdminMenu.Parent = contentFrame
+
+constraints.SimpleAdminMenu = Instance.new("UITextSizeConstraint")
+constraints.SimpleAdminMenu.MaxTextSize = 14
+constraints.SimpleAdminMenu.MinTextSize = 8
+constraints.SimpleAdminMenu.Parent = buttons.SimpleAdminMenu
+
+corners.SimpleAdminMenu = Instance.new("UICorner")
+corners.SimpleAdminMenu.CornerRadius = UDim.new(0, 10)
+corners.SimpleAdminMenu.Parent = buttons.SimpleAdminMenu
+
+buttons.NameSpoofer = Instance.new("TextButton")
+buttons.NameSpoofer.Name = "NameSpooferButton"
+buttons.NameSpoofer.Text = "Name Spoofer"
+buttons.NameSpoofer.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.NameSpoofer.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.NameSpoofer.Position = UDim2.new(1.055, 0, 0.1, 0)
+buttons.NameSpoofer.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.NameSpoofer.BorderSizePixel = 0
+buttons.NameSpoofer.TextScaled = true
+buttons.NameSpoofer.TextWrapped = true
+buttons.NameSpoofer.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.NameSpoofer.Parent = contentFrame
+
+constraints.NameSpoofer = Instance.new("UITextSizeConstraint")
+constraints.NameSpoofer.MaxTextSize = 14
+constraints.NameSpoofer.MinTextSize = 8
+constraints.NameSpoofer.Parent = buttons.NameSpoofer
+
+corners.NameSpoofer = Instance.new("UICorner")
+corners.NameSpoofer.CornerRadius = UDim.new(0, 10)
+corners.NameSpoofer.Parent = buttons.NameSpoofer
+
+buttons.NoClip = Instance.new("TextButton")
+buttons.NoClip.Name = "NoClipButton"
+buttons.NoClip.Text = "No Clip: Off"
+buttons.NoClip.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.NoClip.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.NoClip.Position = UDim2.new(1.410, 0, 0.1, 0)
+buttons.NoClip.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.NoClip.BorderSizePixel = 0
+buttons.NoClip.TextScaled = true
+buttons.NoClip.TextWrapped = true
+buttons.NoClip.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.NoClip.Parent = contentFrame
+
+constraints.NoClip = Instance.new("UITextSizeConstraint")
+constraints.NoClip.MaxTextSize = 14
+constraints.NoClip.MinTextSize = 8
+constraints.NoClip.Parent = buttons.NoClip
+
+corners.NoClip = Instance.new("UICorner")
+corners.NoClip.CornerRadius = UDim.new(0, 10)
+corners.NoClip.Parent = buttons.NoClip
+
+buttons.SSHub = Instance.new("TextButton")
+buttons.SSHub.Name = "67HubButton"
+buttons.SSHub.Text = "67Hub\n(PC Only)"
+buttons.SSHub.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.SSHub.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.SSHub.Position = UDim2.new(-0.365, 0, 0.25, 0)
+buttons.SSHub.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.SSHub.BorderSizePixel = 0
+buttons.SSHub.TextScaled = true
+buttons.SSHub.TextWrapped = true
+buttons.SSHub.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.SSHub.Parent = contentFrame
+
+constraints.SSHub = Instance.new("UITextSizeConstraint")
+constraints.SSHub.MaxTextSize = 14
+constraints.SSHub.MinTextSize = 8
+constraints.SSHub.Parent = buttons.SSHub
+
+corners.SSHub = Instance.new("UICorner")
+corners.SSHub.CornerRadius = UDim.new(0, 10)
+corners.SSHub.Parent = buttons.SSHub
+
+buttons.InvincibleFly = Instance.new("TextButton")
+buttons.InvincibleFly.Name = "InvincibleFlyButton"
+buttons.InvincibleFly.Text = "Invincible Fly"
+buttons.InvincibleFly.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.InvincibleFly.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.InvincibleFly.Position = UDim2.new(-0.010, 0, 0.25, 0)
+buttons.InvincibleFly.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.InvincibleFly.BorderSizePixel = 0
+buttons.InvincibleFly.TextScaled = true
+buttons.InvincibleFly.TextWrapped = true
+buttons.InvincibleFly.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.InvincibleFly.Parent = contentFrame
+
+constraints.InvincibleFly = Instance.new("UITextSizeConstraint")
+constraints.InvincibleFly.MaxTextSize = 14
+constraints.InvincibleFly.MinTextSize = 8
+constraints.InvincibleFly.Parent = buttons.InvincibleFly
+
+corners.InvincibleFly = Instance.new("UICorner")
+corners.InvincibleFly.CornerRadius = UDim.new(0, 10)
+corners.InvincibleFly.Parent = buttons.InvincibleFly
+
+buttons.InfiniteJump = Instance.new("TextButton")
+buttons.InfiniteJump.Name = "InfiniteJumpButton"
+buttons.InfiniteJump.Text = "Infinite Jump: Off"
+buttons.InfiniteJump.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.InfiniteJump.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.InfiniteJump.Position = UDim2.new(0.345, 0, 0.25, 0)
+buttons.InfiniteJump.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.InfiniteJump.BorderSizePixel = 0
+buttons.InfiniteJump.TextScaled = true
+buttons.InfiniteJump.TextWrapped = true
+buttons.InfiniteJump.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.InfiniteJump.Parent = contentFrame
+
+constraints.InfiniteJump = Instance.new("UITextSizeConstraint")
+constraints.InfiniteJump.MaxTextSize = 14
+constraints.InfiniteJump.MinTextSize = 8
+constraints.InfiniteJump.Parent = buttons.InfiniteJump
+
+corners.InfiniteJump = Instance.new("UICorner")
+corners.InfiniteJump.CornerRadius = UDim.new(0, 10)
+corners.InfiniteJump.Parent = buttons.InfiniteJump
+
+buttons.TPTool = Instance.new("TextButton")
+buttons.TPTool.Name = "TPToolButton"
+buttons.TPTool.Text = "TP Tool"
+buttons.TPTool.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.TPTool.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.TPTool.Position = UDim2.new(0.700, 0, 0.25, 0)
+buttons.TPTool.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.TPTool.BorderSizePixel = 0
+buttons.TPTool.TextScaled = true
+buttons.TPTool.TextWrapped = true
+buttons.TPTool.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.TPTool.Parent = contentFrame
+
+constraints.TPTool = Instance.new("UITextSizeConstraint")
+constraints.TPTool.MaxTextSize = 14
+constraints.TPTool.MinTextSize = 8
+constraints.TPTool.Parent = buttons.TPTool
+
+corners.TPTool = Instance.new("UICorner")
+corners.TPTool.CornerRadius = UDim.new(0, 10)
+corners.TPTool.Parent = buttons.TPTool
+
+buttons.Spectate = Instance.new("TextButton")
+buttons.Spectate.Name = "SpectateButton"
+buttons.Spectate.Text = "Spectate Menu"
+buttons.Spectate.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.Spectate.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.Spectate.Position = UDim2.new(1.055, 0, 0.25, 0)
+buttons.Spectate.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Spectate.BorderSizePixel = 0
+buttons.Spectate.TextScaled = true
+buttons.Spectate.TextWrapped = true
+buttons.Spectate.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Spectate.Parent = contentFrame
+
+constraints.Spectate = Instance.new("UITextSizeConstraint")
+constraints.Spectate.MaxTextSize = 14
+constraints.Spectate.MinTextSize = 8
+constraints.Spectate.Parent = buttons.Spectate
+
+corners.Spectate = Instance.new("UICorner")
+corners.Spectate.CornerRadius = UDim.new(0, 10)
+corners.Spectate.Parent = buttons.Spectate
+
+buttons.GoTo = Instance.new("TextButton")
+buttons.GoTo.Name = "GoToButton"
+buttons.GoTo.Text = "Player TP Menu"
+buttons.GoTo.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.GoTo.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.GoTo.Position = UDim2.new(1.410, 0, 0.25, 0)
+buttons.GoTo.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.GoTo.BorderSizePixel = 0
+buttons.GoTo.TextScaled = true
+buttons.GoTo.TextWrapped = true
+buttons.GoTo.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.GoTo.Parent = contentFrame
+
+constraints.GoTo = Instance.new("UITextSizeConstraint")
+constraints.GoTo.MaxTextSize = 14
+constraints.GoTo.MinTextSize = 8
+constraints.GoTo.Parent = buttons.GoTo
+
+constraints.GoTo = Instance.new("UICorner")
+constraints.GoTo.CornerRadius = UDim.new(0, 10)
+constraints.GoTo.Parent = buttons.GoTo
+
+buttons.InfiniteZoom = Instance.new("TextButton")
+buttons.InfiniteZoom.Name = "InfiniteZoomButton"
+buttons.InfiniteZoom.Text = "Infinite Zoom: Off"
+buttons.InfiniteZoom.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.InfiniteZoom.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.InfiniteZoom.Position = UDim2.new(-0.365, 0, 0.4, 0)
+buttons.InfiniteZoom.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.InfiniteZoom.BorderSizePixel = 0
+buttons.InfiniteZoom.TextScaled = true
+buttons.InfiniteZoom.TextWrapped = true
+buttons.InfiniteZoom.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.InfiniteZoom.Parent = contentFrame
+
+constraints.InfiniteZoom = Instance.new("UITextSizeConstraint")
+constraints.InfiniteZoom.MaxTextSize = 14
+constraints.InfiniteZoom.MinTextSize = 8
+constraints.InfiniteZoom.Parent = buttons.InfiniteZoom
+
+corners.InfiniteZoom = Instance.new("UICorner")
+corners.InfiniteZoom.CornerRadius = UDim.new(0, 10)
+corners.InfiniteZoom.Parent = buttons.InfiniteZoom
+
+buttons.AirStrafe = Instance.new("TextButton")
+buttons.AirStrafe.Name = "AirStrafeButton"
+buttons.AirStrafe.Text = "Air Strafe: Off"
+buttons.AirStrafe.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.AirStrafe.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.AirStrafe.Position = UDim2.new(-0.010, 0, 0.4, 0)
+buttons.AirStrafe.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.AirStrafe.BorderSizePixel = 0
+buttons.AirStrafe.TextScaled = true
+buttons.AirStrafe.TextWrapped = true
+buttons.AirStrafe.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.AirStrafe.Parent = contentFrame
+
+constraints.AirStrafe = Instance.new("UITextSizeConstraint")
+constraints.AirStrafe.MaxTextSize = 14
+constraints.AirStrafe.MinTextSize = 8
+constraints.AirStrafe.Parent = buttons.AirStrafe
+
+corners.AirStrafe = Instance.new("UICorner")
+corners.AirStrafe.CornerRadius = UDim.new(0, 10)
+corners.AirStrafe.Parent = buttons.AirStrafe
+
+buttons.Momentum = Instance.new("TextButton")
+buttons.Momentum.Name = "MomentumButton"
+buttons.Momentum.Text = "Ground Momentum: Off"
+buttons.Momentum.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.Momentum.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.Momentum.Position = UDim2.new(0.345, 0, 0.4, 0)
+buttons.Momentum.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.Momentum.BorderSizePixel = 0
+buttons.Momentum.TextScaled = true
+buttons.Momentum.TextWrapped = true
+buttons.Momentum.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.Momentum.Parent = contentFrame
+
+constraints.Momentum = Instance.new("UITextSizeConstraint")
+constraints.Momentum.MaxTextSize = 13
+constraints.Momentum.MinTextSize = 8
+constraints.Momentum.Parent = buttons.Momentum
+
+corners.Momentum = Instance.new("UICorner")
+corners.Momentum.CornerRadius = UDim.new(0, 10)
+corners.Momentum.Parent = buttons.Momentum
+
+buttons.NoSlow = Instance.new("TextButton")
+buttons.NoSlow.Name = "NoSlowButton"
+buttons.NoSlow.Text = "No Slow: Off"
+buttons.NoSlow.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.NoSlow.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.NoSlow.Position = UDim2.new(0.700, 0, 0.4, 0)
+buttons.NoSlow.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.NoSlow.BorderSizePixel = 0
+buttons.NoSlow.TextScaled = true
+buttons.NoSlow.TextWrapped = true
+buttons.NoSlow.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.NoSlow.Parent = contentFrame
+
+constraints.NoSlow = Instance.new("UITextSizeConstraint")
+constraints.NoSlow.MaxTextSize = 14
+constraints.NoSlow.MinTextSize = 8
+constraints.NoSlow.Parent = buttons.NoSlow
+
+corners.NoSlow = Instance.new("UICorner")
+corners.NoSlow.CornerRadius = UDim.new(0, 10)
+corners.NoSlow.Parent = buttons.NoSlow
+
+buttons.ResetSpeed = Instance.new("TextButton")
+buttons.ResetSpeed.Name = "ResetSpeedButton"
+buttons.ResetSpeed.Text = "Reset Speed (16)"
+buttons.ResetSpeed.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.ResetSpeed.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.ResetSpeed.Position = UDim2.new(1.055, 0, 0.4, 0)
+buttons.ResetSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.ResetSpeed.BorderSizePixel = 0
+buttons.ResetSpeed.TextScaled = true
+buttons.ResetSpeed.TextWrapped = true
+buttons.ResetSpeed.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.ResetSpeed.Parent = contentFrame
+
+constraints.ResetSpeed = Instance.new("UITextSizeConstraint")
+constraints.ResetSpeed.MaxTextSize = 14
+constraints.ResetSpeed.MinTextSize = 8
+constraints.ResetSpeed.Parent = buttons.ResetSpeed
+
+corners.ResetSpeed = Instance.new("UICorner")
+corners.ResetSpeed.CornerRadius = UDim.new(0, 10)
+corners.ResetSpeed.Parent = buttons.ResetSpeed
+
+buttons.XRAY = Instance.new("TextButton")
+buttons.XRAY.Name = "XRAYButton"
+buttons.XRAY.Text = "XRAY: Off"
+buttons.XRAY.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.XRAY.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.XRAY.Position = UDim2.new(1.410, 0, 0.4, 0)
+buttons.XRAY.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.XRAY.BorderSizePixel = 0
+buttons.XRAY.TextScaled = true
+buttons.XRAY.TextWrapped = true
+buttons.XRAY.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.XRAY.Parent = contentFrame
+
+constraints.XRAY = Instance.new("UITextSizeConstraint")
+constraints.XRAY.MaxTextSize = 14
+constraints.XRAY.MinTextSize = 8
+constraints.XRAY.Parent = buttons.XRAY
+
+corners.XRAY = Instance.new("UICorner")
+corners.XRAY.CornerRadius = UDim.new(0, 10)
+corners.XRAY.Parent = buttons.XRAY
+
+buttons.ThirdPerson = Instance.new("TextButton")
+buttons.ThirdPerson.Name = "ThirdPersonButton"
+buttons.ThirdPerson.Text = "Force Third Person: Off"
+buttons.ThirdPerson.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.ThirdPerson.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.ThirdPerson.Position = UDim2.new(-0.365, 0, 0.55, 0)
+buttons.ThirdPerson.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.ThirdPerson.BorderSizePixel = 0
+buttons.ThirdPerson.TextScaled = true
+buttons.ThirdPerson.TextWrapped = true
+buttons.ThirdPerson.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.ThirdPerson.Parent = contentFrame
+
+constraints.ThirdPerson = Instance.new("UITextSizeConstraint")
+constraints.ThirdPerson.MaxTextSize = 13
+constraints.ThirdPerson.MinTextSize = 8
+constraints.ThirdPerson.Parent = buttons.ThirdPerson
+
+corners.ThirdPerson = Instance.new("UICorner")
+corners.ThirdPerson.CornerRadius = UDim.new(0, 10)
+corners.ThirdPerson.Parent = buttons.ThirdPerson
+
+buttons.FirstPerson = Instance.new("TextButton")
+buttons.FirstPerson.Name = "FirstPersonButton"
+buttons.FirstPerson.Text = "Force First Person: Off"
+buttons.FirstPerson.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.FirstPerson.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.FirstPerson.Position = UDim2.new(-0.010, 0, 0.55, 0)
+buttons.FirstPerson.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.FirstPerson.BorderSizePixel = 0
+buttons.FirstPerson.TextScaled = true
+buttons.FirstPerson.TextWrapped = true
+buttons.FirstPerson.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.FirstPerson.Parent = contentFrame
+
+constraints.FirstPerson = Instance.new("UITextSizeConstraint")
+constraints.FirstPerson.MaxTextSize = 13
+constraints.FirstPerson.MinTextSize = 8
+constraints.FirstPerson.Parent = buttons.FirstPerson
+
+corners.FirstPerson = Instance.new("UICorner")
+corners.FirstPerson.CornerRadius = UDim.new(0, 10)
+corners.FirstPerson.Parent = buttons.FirstPerson
+
+buttons.FShiftlock = Instance.new("TextButton")
+buttons.FShiftlock.Name = "FShiftlockButton"
+buttons.FShiftlock.Text = "Force ShiftLock: Off\n(PC Only)"
+buttons.FShiftlock.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.FShiftlock.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.FShiftlock.Position = UDim2.new(0.345, 0, 0.55, 0)
+buttons.FShiftlock.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.FShiftlock.BorderSizePixel = 0
+buttons.FShiftlock.TextScaled = true
+buttons.FShiftlock.TextWrapped = true
+buttons.FShiftlock.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.FShiftlock.Parent = contentFrame
+
+constraints.FShiftlock = Instance.new("UITextSizeConstraint")
+constraints.FShiftlock.MaxTextSize = 14
+constraints.FShiftlock.MinTextSize = 8
+constraints.FShiftlock.Parent = buttons.FShiftlock
+
+corners.FShiftlock = Instance.new("UICorner")
+corners.FShiftlock.CornerRadius = UDim.new(0, 10)
+corners.FShiftlock.Parent = buttons.FShiftlock
+
+buttons.CShiftlock = Instance.new("TextButton")
+buttons.CShiftlock.Name = "CShiftlockButton"
+buttons.CShiftlock.Text = "Custom ShiftLock\n(Mobile & PC)"
+buttons.CShiftlock.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.CShiftlock.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.CShiftlock.Position = UDim2.new(0.700, 0, 0.55, 0)
+buttons.CShiftlock.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.CShiftlock.BorderSizePixel = 0
+buttons.CShiftlock.TextScaled = true
+buttons.CShiftlock.TextWrapped = true
+buttons.CShiftlock.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.CShiftlock.Parent = contentFrame
+
+constraints.CShiftlock = Instance.new("UITextSizeConstraint")
+constraints.CShiftlock.MaxTextSize = 14
+constraints.CShiftlock.MinTextSize = 8
+constraints.CShiftlock.Parent = buttons.CShiftlock
+
+corners.CShiftlock = Instance.new("UICorner")
+corners.CShiftlock.CornerRadius = UDim.new(0, 10)
+corners.CShiftlock.Parent = buttons.CShiftlock
+
+buttons.UnlockCursor = Instance.new("TextButton")
+buttons.UnlockCursor.Name = "UnlockCursorButton"
+buttons.UnlockCursor.Text = "Unlock Cursor: Off\n(PC Only)"
+buttons.UnlockCursor.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.UnlockCursor.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.UnlockCursor.Position = UDim2.new(1.055, 0, 0.55, 0)
+buttons.UnlockCursor.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.UnlockCursor.BorderSizePixel = 0
+buttons.UnlockCursor.TextScaled = true
+buttons.UnlockCursor.TextWrapped = true
+buttons.UnlockCursor.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.UnlockCursor.Parent = contentFrame
+
+constraints.UnlockCursor = Instance.new("UITextSizeConstraint")
+constraints.UnlockCursor.MaxTextSize = 14
+constraints.UnlockCursor.MinTextSize = 8
+constraints.UnlockCursor.Parent = buttons.UnlockCursor
+
+corners.UnlockCursor = Instance.new("UICorner")
+corners.UnlockCursor.CornerRadius = UDim.new(0, 10)
+corners.UnlockCursor.Parent = buttons.UnlockCursor
+
+buttons.UnlockCursorKeyBind = Instance.new("TextButton")
+buttons.UnlockCursorKeyBind.Name = "UnlockCursorKeyBindButton"
+buttons.UnlockCursorKeyBind.Text = "Unlock Cursor KeyBind: ..."
+buttons.UnlockCursorKeyBind.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.UnlockCursorKeyBind.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.UnlockCursorKeyBind.Position = UDim2.new(1.410, 0, 0.55, 0)
+buttons.UnlockCursorKeyBind.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.UnlockCursorKeyBind.BorderSizePixel = 0
+buttons.UnlockCursorKeyBind.TextScaled = true
+buttons.UnlockCursorKeyBind.TextWrapped = true
+buttons.UnlockCursorKeyBind.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.UnlockCursorKeyBind.Parent = contentFrame
+
+constraints.UnlockCursorKeyBind = Instance.new("UITextSizeConstraint")
+constraints.UnlockCursorKeyBind.MaxTextSize = 14
+constraints.UnlockCursorKeyBind.MinTextSize = 8
+constraints.UnlockCursorKeyBind.Parent = buttons.UnlockCursorKeyBind
+
+corners.UnlockCursorKeyBind = Instance.new("UICorner")
+corners.UnlockCursorKeyBind.CornerRadius = UDim.new(0, 10)
+corners.UnlockCursorKeyBind.Parent = buttons.UnlockCursorKeyBind
+
+buttons.ESPSkeletons = Instance.new("TextButton")
+buttons.ESPSkeletons.Name = "ESPSkeletonsButton"
+buttons.ESPSkeletons.Text = "Skeleton ESP: Off"
+buttons.ESPSkeletons.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.ESPSkeletons.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.ESPSkeletons.Position = UDim2.new(-0.365, 0, 0.7, 0)
+buttons.ESPSkeletons.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.ESPSkeletons.BorderSizePixel = 0
+buttons.ESPSkeletons.TextScaled = true
+buttons.ESPSkeletons.TextWrapped = true
+buttons.ESPSkeletons.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.ESPSkeletons.Parent = contentFrame
+
+constraints.ESPSkeletons = Instance.new("UITextSizeConstraint")
+constraints.ESPSkeletons.MaxTextSize = 14
+constraints.ESPSkeletons.MinTextSize = 8
+constraints.ESPSkeletons.Parent = buttons.ESPSkeletons
+
+corners.ESPSkeletons = Instance.new("UICorner")
+corners.ESPSkeletons.CornerRadius = UDim.new(0, 10)
+corners.ESPSkeletons.Parent = buttons.ESPSkeletons
+
+buttons.ESPBoxes = Instance.new("TextButton")
+buttons.ESPBoxes.Name = "ESPBoxesButton"
+buttons.ESPBoxes.Text = "Box ESP: Off"
+buttons.ESPBoxes.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.ESPBoxes.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.ESPBoxes.Position = UDim2.new(-0.010, 0, 0.7, 0)
+buttons.ESPBoxes.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.ESPBoxes.BorderSizePixel = 0
+buttons.ESPBoxes.TextScaled = true
+buttons.ESPBoxes.TextWrapped = true
+buttons.ESPBoxes.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.ESPBoxes.Parent = contentFrame
+
+constraints.ESPBoxes = Instance.new("UITextSizeConstraint")
+constraints.ESPBoxes.MaxTextSize = 14
+constraints.ESPBoxes.MinTextSize = 8
+constraints.ESPBoxes.Parent = buttons.ESPBoxes
+
+corners.ESPBoxes = Instance.new("UICorner")
+corners.ESPBoxes.CornerRadius = UDim.new(0, 10)
+corners.ESPBoxes.Parent = buttons.ESPBoxes
+
+buttons.ESPChams = Instance.new("TextButton")
+buttons.ESPChams.Name = "ESPChamsButton"
+buttons.ESPChams.Text = "Chams ESP: Off"
+buttons.ESPChams.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.ESPChams.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.ESPChams.Position = UDim2.new(0.345, 0, 0.7, 0)
+buttons.ESPChams.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.ESPChams.BorderSizePixel = 0
+buttons.ESPChams.TextScaled = true
+buttons.ESPChams.TextWrapped = true
+buttons.ESPChams.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.ESPChams.Parent = contentFrame
+
+constraints.ESPChams = Instance.new("UITextSizeConstraint")
+constraints.ESPChams.MaxTextSize = 14
+constraints.ESPChams.MinTextSize = 8
+constraints.ESPChams.Parent = buttons.ESPChams
+
+corners.ESPChams = Instance.new("UICorner")
+corners.ESPChams.CornerRadius = UDim.new(0, 10)
+corners.ESPChams.Parent = buttons.ESPChams
+
+buttons.TeamCheck = Instance.new("TextButton")
+buttons.TeamCheck.Name = "TeamCheckButton"
+buttons.TeamCheck.Text = "Team Check ESP: Off"
+buttons.TeamCheck.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.TeamCheck.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.TeamCheck.Position = UDim2.new(0.700, 0, 0.7, 0)
+buttons.TeamCheck.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.TeamCheck.BorderSizePixel = 0
+buttons.TeamCheck.TextScaled = true
+buttons.TeamCheck.TextWrapped = true
+buttons.TeamCheck.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.TeamCheck.Parent = contentFrame
+
+constraints.TeamCheck = Instance.new("UITextSizeConstraint")
+constraints.TeamCheck.MaxTextSize = 14
+constraints.TeamCheck.MinTextSize = 8
+constraints.TeamCheck.Parent = buttons.TeamCheck
+
+corners.TeamCheck = Instance.new("UICorner")
+corners.TeamCheck.CornerRadius = UDim.new(0, 10)
+corners.TeamCheck.Parent = buttons.TeamCheck
+
+buttons.LedgeClimbing = Instance.new("TextButton")
+buttons.LedgeClimbing.Name = "LedgeClimbingButton"
+buttons.LedgeClimbing.Text = "Ledge Climbing: Off\n(Beta)"
+buttons.LedgeClimbing.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.LedgeClimbing.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.LedgeClimbing.Position = UDim2.new(1.055, 0, 0.7, 0)
+buttons.LedgeClimbing.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.LedgeClimbing.BorderSizePixel = 0
+buttons.LedgeClimbing.TextScaled = true
+buttons.LedgeClimbing.TextWrapped = true
+buttons.LedgeClimbing.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.LedgeClimbing.Parent = contentFrame
+
+constraints.LedgeClimbing = Instance.new("UITextSizeConstraint")
+constraints.LedgeClimbing.MaxTextSize = 14
+constraints.LedgeClimbing.MinTextSize = 8
+constraints.LedgeClimbing.Parent = buttons.LedgeClimbing
+
+corners.LedgeClimbing = Instance.new("UICorner")
+corners.LedgeClimbing.CornerRadius = UDim.new(0, 10)
+corners.LedgeClimbing.Parent = buttons.LedgeClimbing
+
+buttons.LedgeClimber = Instance.new("TextButton")
+buttons.LedgeClimber.Name = "LedgeClimberButton"
+buttons.LedgeClimber.Text = "Ledge Climber: Off\n(Beta)"
+buttons.LedgeClimber.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.LedgeClimber.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.LedgeClimber.Position = UDim2.new(1.410, 0, 0.7, 0)
+buttons.LedgeClimber.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.LedgeClimber.BorderSizePixel = 0
+buttons.LedgeClimber.TextScaled = true
+buttons.LedgeClimber.TextWrapped = true
+buttons.LedgeClimber.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.LedgeClimber.Parent = contentFrame
+
+constraints.LedgeClimber = Instance.new("UITextSizeConstraint")
+constraints.LedgeClimber.MaxTextSize = 14
+constraints.LedgeClimber.MinTextSize = 8
+constraints.LedgeClimber.Parent = buttons.LedgeClimber
+
+corners.LedgeClimber = Instance.new("UICorner")
+corners.LedgeClimber.CornerRadius = UDim.new(0, 10)
+corners.LedgeClimber.Parent = buttons.LedgeClimber
+
+buttons.FullBright = Instance.new("TextButton")
+buttons.FullBright.Name = "FullBrightButton"
+buttons.FullBright.Text = "Full Bright: Off"
+buttons.FullBright.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.FullBright.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.FullBright.Position = UDim2.new(1.410, 0, 0.85, 0)
+buttons.FullBright.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.FullBright.BorderSizePixel = 0
+buttons.FullBright.TextScaled = true
+buttons.FullBright.TextWrapped = true
+buttons.FullBright.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.FullBright.Parent = contentFrame
+
+constraints.FullBright = Instance.new("UITextSizeConstraint")
+constraints.FullBright.MaxTextSize = 14
+constraints.FullBright.MinTextSize = 8
+constraints.FullBright.Parent = buttons.FullBright
+
+corners.FullBright = Instance.new("UICorner")
+corners.FullBright.CornerRadius = UDim.new(0, 10)
+corners.FullBright.Parent = buttons.FullBright
+
+local sectionButtonTexts = {
+    "Main",
+    "Others",
+    "TSB",
+    "MM2",
+    "Settings"
+}
+
+local sectionButtons = {}
+for i, buttonText in ipairs(sectionButtonTexts) do
+    local sectionButton = Instance.new("TextButton")
+    sectionButton.Name = "SectionButton" .. i
+    sectionButton.Text = buttonText
+    sectionButton.Size = UDim2.new(2, 0, 0.2, 0)
+    sectionButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    sectionButton.BackgroundTransparency = 0
+    sectionButton.TextSize = 14
+    sectionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sectionButton.ZIndex = 20
+    sectionButton.LayoutOrder = i
+    sectionButton.Parent = wardFrame
+    
+    local sectionCorner = Instance.new("UICorner")
+    sectionCorner.CornerRadius = UDim.new(0, 8)
+    sectionCorner.Parent = sectionButton
+
+    local sectionStroke = Instance.new("UIStroke")
+    sectionStroke.Color = Color3.fromRGB(255, 255, 255)
+    sectionStroke.Thickness = 2
+    sectionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    sectionStroke.Parent = sectionButton
+    
+    sectionButtons[buttonText] = sectionButton
+end
+
+-- ============================================
+-- BUTTON SCRIPTS
+-- ============================================
+
+local dragging = false
+local dragMoved = false
+local dragInput, dragStart, startPos
+
+local function updateButtonPosition(input)
+    local delta = input.Position - dragStart
+    local newX = math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - buttons.Open.AbsoluteSize.X)
+    local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - buttons.Open.AbsoluteSize.Y)
+    buttons.Open.Position = UDim2.new(0, newX, 0, newY)
+
+    if delta.Magnitude > 5 then
+        dragMoved = true
+    end
+end
+
+buttons.Open.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragMoved = false
+        dragStart = input.Position
+        startPos = buttons.Open.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+buttons.Open.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateButtonPosition(input)
+    end
+end)
+
+local function setMenuOpen(isOpen)
+    menuFrame.Visible = isOpen
+    buttons.Open.Visible = not isOpen
+    menuBlur.Size = isOpen and 18 or 0
+end
+
+buttons.Open.MouseButton1Click:Connect(function()
+    if dragMoved then
+        dragMoved = false
+        return
+    end
+    setMenuOpen(true)
+end)
+
+buttons.Close.MouseButton1Click:Connect(function()
+    setMenuOpen(false)
+end)
+
+buttons.Hamburger.MouseButton1Click:Connect(function()
+    wardFrame.Visible = not wardFrame.Visible
+    menuBlur2.Visible = not menuBlur2.Visible
+    inputBlocker.Visible = not inputBlocker.Visible
+end)
+
+for buttonText, sectionButton in pairs(sectionButtons) do
+    sectionButton.MouseButton1Click:Connect(function()
+        wardFrame.Visible = false
+        menuBlur2.Visible = false
+        inputBlocker.Visible = false
+        for _, child in ipairs(contentFrame:GetChildren()) do
+            if child:IsA("Frame") or child:IsA("TextButton") then
+                child.Visible = false
+            end
+        end
+        if buttonText == "Main" then
+            buttons.Crypton.Visible = true
+            buttons.IY.Visible = true
+            buttons.TouchFling.Visible = true
+            buttons.DanyadsFling.Visible = true
+            buttons.AntiFling.Visible = true
+            buttons.NoClip.Visible = true
+            buttons.Fly.Visible = true
+            buttons.Emotes.Visible = true
+            buttons.LoopFling.Visible = true
+            buttons.Speed.Visible = true
+            buttons.NameSpoofer.Visible = true
+            buttons.SimpleAdminMenu.Visible = true
+            buttons.SSHub.Visible = true
+            buttons.InvincibleFly.Visible = true
+            buttons.InfiniteJump.Visible = true
+            buttons.TPTool.Visible = true
+            buttons.Spectate.Visible = true
+            buttons.GoTo.Visible = true
+            buttons.InfiniteZoom.Visible = true
+            buttons.AirStrafe.Visible = true
+            buttons.Momentum.Visible = true
+            buttons.NoSlow.Visible = true
+            buttons.ResetSpeed.Visible = true
+            buttons.XRAY.Visible = true
+            buttons.ThirdPerson.Visible = true
+            buttons.FirstPerson.Visible = true
+            buttons.FShiftlock.Visible = true
+            buttons.CShiftlock.Visible = true
+            buttons.UnlockCursor.Visible = true
+            buttons.UnlockCursorKeyBind.Visible = true
+            buttons.ESPSkeletons.Visible = true
+            buttons.ESPBoxes.Visible = true
+            buttons.ESPChams.Visible = true
+            buttons.TeamCheck.Visible = true
+            buttons.LedgeClimbing.Visible = true
+            buttons.LedgeClimber.Visible = true
+            buttons.FullBright.Visible = true
+            topBarLabel.Text = "Main"
+        elseif buttonText == "TSB" then
+            local tsbFrame = contentFrame:FindFirstChild("TSBFrame")
+            if not tsbFrame then
+                tsbFrame = Instance.new("Frame")
+                tsbFrame.Name = "TSBFrame"
+                tsbFrame.Size = UDim2.new(1, 0, 1, 0)
+                tsbFrame.BackgroundTransparency = 1
+                tsbFrame.Parent = contentFrame
+
+                buttons.Phantasm = Instance.new("TextButton")
+                buttons.Phantasm.Name = "PhantasmButton"
+                buttons.Phantasm.Text = "Phantasm"
+                buttons.Phantasm.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.Phantasm.Size = UDim2.new(0.32, 0, 0.12, 0)
+                buttons.Phantasm.Position = UDim2.new(-0.365, 0, -0.05, 0)
+                buttons.Phantasm.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.Phantasm.BorderSizePixel = 0
+                buttons.Phantasm.TextScaled = true
+                buttons.Phantasm.TextWrapped = true
+                buttons.Phantasm.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.Phantasm.Parent = tsbFrame
+
+                constraints.Phantasm = Instance.new("UITextSizeConstraint")
+                constraints.Phantasm.MaxTextSize = 14
+                constraints.Phantasm.MinTextSize = 8
+                constraints.Phantasm.Parent = buttons.Phantasm
+
+                corners.Phantasm = Instance.new("UICorner")
+                corners.Phantasm.CornerRadius = UDim.new(0, 10)
+                corners.Phantasm.Parent = buttons.Phantasm
+
+                buttons.Phantasm.MouseButton1Click:Connect(function()
+                    pcall(function()
+                        loadstring(game:HttpGet('https://raw.githubusercontent.com/ATrainz/Phantasm/refs/heads/main/Games/TSB.lua'))()
+                    end)
+                end)
+
+                buttons.DoviHub = Instance.new("TextButton")
+                buttons.DoviHub.Name = "DoviHubButton"
+                buttons.DoviHub.Text = "Dovi's Hub"
+                buttons.DoviHub.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.DoviHub.Size = UDim2.new(0.32, 0, 0.12, 0)
+                buttons.DoviHub.Position = UDim2.new(-0.010, 0, -0.05, 0)
+                buttons.DoviHub.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.DoviHub.BorderSizePixel = 0
+                buttons.DoviHub.TextScaled = true
+                buttons.DoviHub.TextWrapped = true
+                buttons.DoviHub.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.DoviHub.Parent = tsbFrame
+
+                constraints.DoviHub = Instance.new("UITextSizeConstraint")
+                constraints.DoviHub.MaxTextSize = 14
+                constraints.DoviHub.MinTextSize = 8
+                constraints.DoviHub.Parent = buttons.DoviHub
+
+                corners.DoviHub = Instance.new("UICorner")
+                corners.DoviHub.CornerRadius = UDim.new(0, 10)
+                corners.DoviHub.Parent = buttons.DoviHub
+
+                buttons.DoviHub.MouseButton1Click:Connect(function()
+                    pcall(function()
+                        loadstring(game:HttpGet("https://raw.githubusercontent.com/needanewphone32-eng/tsbfiles/refs/heads/main/Main1.lua"))()
+                    end)
+                end)
+            end
+            tsbFrame.Visible = true
+            topBarLabel.Text = buttonText
+        elseif buttonText == "MM2" then
+            local mm2Frame = contentFrame:FindFirstChild("MM2Frame")
+            if not mm2Frame then
+                mm2Frame = Instance.new("Frame")
+                mm2Frame.Name = "MM2Frame"
+                mm2Frame.Size = UDim2.new(1, 0, 1, 0)
+                mm2Frame.BackgroundTransparency = 1
+                mm2Frame.Parent = contentFrame
+
+                buttons.YARHM = Instance.new("TextButton")
+                buttons.YARHM.Name = "YARHMButton"
+                buttons.YARHM.Text = "YARHM"
+                buttons.YARHM.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.YARHM.Size = UDim2.new(0.32, 0, 0.12, 0)
+                buttons.YARHM.Position = UDim2.new(-0.365, 0, -0.05, 0)
+                buttons.YARHM.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.YARHM.BorderSizePixel = 0
+                buttons.YARHM.TextScaled = true
+                buttons.YARHM.TextWrapped = true
+                buttons.YARHM.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.YARHM.Parent = mm2Frame
+
+                constraints.YARHM = Instance.new("UITextSizeConstraint")
+                constraints.YARHM.MaxTextSize = 14
+                constraints.YARHM.MinTextSize = 8
+                constraints.YARHM.Parent = buttons.YARHM
+
+                corners.YARHM = Instance.new("UICorner")
+                corners.YARHM.CornerRadius = UDim.new(0, 10)
+                corners.YARHM.Parent = buttons.YARHM
+
+                buttons.YARHM.MouseButton1Click:Connect(function()
+                    pcall(function()
+                        loadstring(game:HttpGet("https://raw.githubusercontent.com/Joystickplays/psychic-octo-invention/main/source/yarhm/1.21/yarhm.lua"))()
+                    end)
+                end)
+            end
+            mm2Frame.Visible = true
+            topBarLabel.Text = buttonText
+        elseif buttonText == "Settings" then
+            local settingsFrame = contentFrame:FindFirstChild("SettingsFrame")
+            if not settingsFrame then
+                settingsFrame = Instance.new("Frame")
+                settingsFrame.Name = "SettingsFrame"
+                settingsFrame.Size = UDim2.new(1, 0, 1, 0)
+                settingsFrame.BackgroundTransparency = 1
+                settingsFrame.Parent = contentFrame
+
+                buttons.unload = Instance.new("TextButton")
+                buttons.unload.Name = "UnloadButton"
+                buttons.unload.Text = "Unload"
+                buttons.unload.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.unload.Size = UDim2.new(0.32, 0, 0.12, 0)
+                buttons.unload.Position = UDim2.new(-0.010, 0, -0.05, 0)
+                buttons.unload.BackgroundColor3 = Color3.fromRGB(40,40,40)
+                buttons.unload.BorderSizePixel = 0
+                buttons.unload.TextScaled = true
+                buttons.unload.TextWrapped = true
+                buttons.unload.TextColor3 = Color3.fromRGB(255,255,255)
+                buttons.unload.Parent = settingsFrame
+
+                constraints.unload = Instance.new("UITextSizeConstraint")
+                constraints.unload.MaxTextSize = 14
+                constraints.unload.MinTextSize = 8
+                constraints.unload.Parent = buttons.unload
+
+                corners.unload = Instance.new("UICorner")
+                corners.unload.CornerRadius = UDim.new(0,10)
+                corners.unload.Parent = buttons.unload
+
+                buttons.unload.MouseButton1Click:Connect(function()
+                    UnlockCursorKeyBind = nil
+                    menuKeyBind = nil
+                    isSentinelKept = false
+                    for _, feature in pairs(features) do
+                        if feature.enabled() then
+                            feature.disable()
+                        end
+                    end
+                    if queueteleport then
+                        queueteleport("")
+                    end
+                    if screenGui then
+                        menuBlur:Destroy()
+                        menuBlur2:Destroy()
+                        inputBlocker:Destroy()
+                        menuFrame:Destroy()
+                        screenGui:Destroy()
+                    end
+                end)
+
+                buttons.keepSentinel = Instance.new("TextButton")
+                buttons.keepSentinel.Name = "KeepSentinelButton"
+                buttons.keepSentinel.Text = "Keep Sentinel Hub: Yes"
+                buttons.keepSentinel.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.keepSentinel.Size = UDim2.new(0.32, 0, 0.12, 0)
+                buttons.keepSentinel.Position = UDim2.new(0.345, 0, -0.05, 0)
+                buttons.keepSentinel.BackgroundColor3 = Color3.fromRGB(40,40,40)
+                buttons.keepSentinel.BorderSizePixel = 0
+                buttons.keepSentinel.TextScaled = true
+                buttons.keepSentinel.TextWrapped = true
+                buttons.keepSentinel.TextColor3 = Color3.fromRGB(255,255,255)
+                buttons.keepSentinel.Parent = settingsFrame
+
+                constraints.keepSentinel = Instance.new("UITextSizeConstraint")
+                constraints.keepSentinel.MaxTextSize = 13
+                constraints.keepSentinel.MinTextSize = 8
+                constraints.keepSentinel.Parent = buttons.keepSentinel
+
+                corners.keepSentinel = Instance.new("UICorner")
+                corners.keepSentinel.CornerRadius = UDim.new(0,10)
+                corners.keepSentinel.Parent = buttons.keepSentinel
+
+                buttons.keepSentinel.MouseButton1Click:Connect(function()
+                    isSentinelKept = not isSentinelKept
+                    if isSentinelKept then
+                        buttons.keepSentinel.Text = "Keep Sentinel Hub: Yes"
+                    else
+                        buttons.keepSentinel.Text = "Keep Sentinel Hub: No"
+                    end
+                end)
+
+                buttons.menu = Instance.new("TextButton")
+                buttons.menu.Name = "MenuButton"
+                buttons.menu.Text = "Menu\nKey: ..."
+                buttons.menu.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.menu.Size = UDim2.new(0.32, 0, 0.12, 0)
+                buttons.menu.Position = UDim2.new(-0.365, 0, -0.05, 0)
+                buttons.menu.BackgroundColor3 = Color3.fromRGB(40,40,40)
+                buttons.menu.BorderSizePixel = 0
+                buttons.menu.TextScaled = true
+                buttons.menu.TextWrapped = true
+                buttons.menu.TextColor3 = Color3.fromRGB(255,255,255)
+                buttons.menu.Parent = settingsFrame
+
+                constraints.menu = Instance.new("UITextSizeConstraint")
+                constraints.menu.MaxTextSize = 14
+                constraints.menu.MinTextSize = 8
+                constraints.menu.Parent = buttons.menu
+
+                corners.menu = Instance.new("UICorner")
+                corners.menu.CornerRadius = UDim.new(0,10)
+                corners.menu.Parent = buttons.menu
+
+                buttons.menu.MouseButton1Click:Connect(function()
+                    buttons.menu.Text = "Press a key..."
+                    isBindingMenuKey = true
+                    ignoreMenuToggleAfterBinding = true
+                    menuConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                        if not gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard then
+                            menuKeyBind = input.KeyCode
+                            buttons.menu.Text = "Menu\nKey: " .. menuKeyBind.Name
+                            isBindingMenuKey = false
+                            lastMenuBindTime = tick()
+                            menuConnection:Disconnect()
+                            task.defer(function()
+                                ignoreMenuToggleAfterBinding = false
+                            end)
+                        end
+                    end)
+                end)
+            end
+            settingsFrame.Visible = true
+            topBarLabel.Text = buttonText
+        else
+            local sectionFrame = contentFrame:FindFirstChild(buttonText .. "Frame")
+            if not sectionFrame then
+                sectionFrame = Instance.new("Frame")
+                sectionFrame.Name = buttonText .. "Frame"
+                sectionFrame.Size = UDim2.new(1, 0, 1, 0)
+                sectionFrame.BackgroundTransparency = 1
+                sectionFrame.Parent = contentFrame
+            end
+            topBarLabel.Text = buttonText
+            sectionFrame.Visible = true
+        end
+    end)
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then
+        return
+    end
+end)
+
+buttons.Crypton.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Crypton/main/Source"))()
+    end)
+end)
+
+buttons.IY.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end)
+end)
+
+buttons.TouchFling.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Touch-Fling/main/Source"))()
+    end)
+end)
+
+buttons.DanyadsFling.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/danyad22/Fling/refs/heads/main/main.lua"))()
+    end)
+end)
+
+
+buttons.Fly.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Fly/main/Source"))()
+    end)
+end)
+
+buttons.Emotes.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Bac0nHck/Scripts/refs/heads/main/BundleAnimations.lua"))()
+    end)
+end)
+
+buttons.LoopFling.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Loop-fling-all-247255"))()
+    end)
+end)
+
+buttons.SimpleAdminMenu.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://permanentdatabase.vercel.app/api/load?name=hub"))()
+    end)
+end)
+
+buttons.NameSpoofer.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Anonymous-Name-72537"))()
+    end)
+end)
+
+buttons.Speed.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Speed/main/Source"))()
+    end)
+end)
+
+buttons.SSHub.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/rchrak47-stack/67-Hub-by-Duke/refs/heads/main/67%20Hub"))()
+    end)
+end)
+
+buttons.InvincibleFly.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Invincible-Fly/main/Source"))()
+    end)
+end)
+
+buttons.TPTool.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/TP-Tool/main/Source"))()
+    end)
+end)
+
+buttons.Spectate.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Spectate/main/Source"))()
+    end)
+end)
+
+buttons.GoTo.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/GoTo/main/Source"))()
+    end)
+end)
+
+buttons.CShiftlock.MouseButton1Click:Connect(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Shift-Lock/main/Source"))()
+    end)
+end)
+
+buttons.AntiFling.MouseButton1Click:Connect(function()
+    isAntiFlingEnabled = not isAntiFlingEnabled
+    if isNoClipEnabled then
+        disableNoClip()
+        isNoClipEnabled = false
+        buttons.NoClip.Text = "No Clip: Off"
+    end
+    if isAntiFlingEnabled then
+        enableAntiFling()
+        buttons.AntiFling.Text = "Anti Fling: On"
+    else
+        disableAntiFling()
+        buttons.AntiFling.Text = "Anti Fling: Off"
+    end
+end)
+
+buttons.NoClip.MouseButton1Click:Connect(function()
+    isNoClipEnabled = not isNoClipEnabled
+    if isAntiFlingEnabled then
+        disableAntiFling()
+        isAntiFlingEnabled = false
+        buttons.AntiFling.Text = "Anti Fling: Off"
+    end
+    if isNoClipEnabled then
+        buttons.NoClip.Text = "No Clip: On"
+        enableNoClip()
+    else
+        buttons.NoClip.Text = "No Clip: Off"
+        disableNoClip()
+    end
+end)
+
+buttons.InfiniteJump.MouseButton1Click:Connect(function()
+    isInfJumping = not isInfJumping
+    if isInfJumping then
+        enableInfJump()
+        buttons.InfiniteJump.Text = "Infinite Jump: On"
+    else
+        disableInfJump()
+        buttons.InfiniteJump.Text = "Infinite Jump: Off"
+    end
+end)
+
+buttons.InfiniteZoom.MouseButton1Click:Connect(function()
+	if not isInfiniteZoomEnabled then
+		EnableInfiniteZoom()
+		buttons.InfiniteZoom.Text = "Infinite Zoom: On"
+	else
+		DisableInfiniteZoom()
+		buttons.InfiniteZoom.Text = "Infinite Zoom: Off"
+	end
+end)
+
+buttons.AirStrafe.MouseButton1Click:Connect(function()
+	ToggleAirStrafe()
+    if isAirStrafeEnabled then
+		buttons.AirStrafe.Text = "Air Strafe: On"
+	else
+		buttons.AirStrafe.Text = "Air Strafe: Off"
+	end
+end)
+
+buttons.Momentum.MouseButton1Click:Connect(function()
+    ToggleMomentum()
+	if isMomentumEnabled then
+		buttons.Momentum.Text = "Ground Momentum: On"
+	else
+		buttons.Momentum.Text = "Ground Momentum: Off"
+	end
+end)
+
+buttons.NoSlow.MouseButton1Click:Connect(function()
+    isNoSlowEnabled = not isNoSlowEnabled
+	if isNoSlowEnabled then
+        NoSlowSpeed = GetHumanoidSpeed()
+        EnableNoSlow()
+		buttons.NoSlow.Text = "No Slow: On\n(Stopped Speed Changes)"
+	else
+		buttons.NoSlow.Text = "No Slow: Off"
+	end
+end)
+
+buttons.ResetSpeed.MouseButton1Click:Connect(function()
+    if player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 16
+        end
+    end
+end)
+
+buttons.XRAY.MouseButton1Click:Connect(function()
+    if not isXRAYEnabled then
+        EnableXRAY()
+        buttons.XRAY.Text = "XRAY: On"
+    else
+        DisableXRAY()
+        buttons.XRAY.Text = "XRAY: Off"
+    end
+end)
+
+buttons.ThirdPerson.MouseButton1Click:Connect(function()
+    if firstPersonState ~= 0 then
+        firstPersonState = 0
+        DisableFirstPerson()
+        buttons.FirstPerson.Text = "Force First Person: Off"
+    end
+    thirdPersonState = thirdPersonState + 1
+    if thirdPersonState > 2 then
+        thirdPersonState = 0
+    end
+    if thirdPersonState == 1 then
+        ForceThirdPerson(0)
+        buttons.ThirdPerson.Text = "Force Third Person: Offset"
+    elseif thirdPersonState == 2 then
+        ForceThirdPersonCFrame(15)
+        buttons.ThirdPerson.Text = "Force Third Person: CFrame"
+    else
+        DisableThirdPerson()
+        buttons.ThirdPerson.Text = "Force Third Person: Off"
+    end
+end)
+
+buttons.FirstPerson.MouseButton1Click:Connect(function()
+    if thirdPersonState ~= 0 then
+        thirdPersonState = 0
+        DisableThirdPerson()
+        buttons.ThirdPerson.Text = "Force Third Person: Off"
+    end
+    firstPersonState = firstPersonState + 1
+    if firstPersonState > 2 then
+        firstPersonState = 0
+    end
+    if firstPersonState == 1 then
+        ForceFirstPerson()
+        buttons.FirstPerson.Text = "Force First Person:\nOffset"
+    elseif firstPersonState == 2 then
+        ForceFirstPersonCFrame()
+        buttons.FirstPerson.Text = "Force First Person: CFrame"
+    else
+        DisableFirstPerson()
+        buttons.FirstPerson.Text = "Force First Person: Off"
+    end
+end)
+
+buttons.FShiftlock.MouseButton1Click:Connect(function()
+    isShiftLockEnabled = not isShiftLockEnabled
+    if isShiftLockEnabled then
+        EnableShiftlock()
+        buttons.FShiftlock.Text = "Force ShiftLock: On\n(PC Only)"
+    else
+        DisableShiftlock()
+        buttons.FShiftlock.Text = "Force ShiftLock: Off\n(PC Only)"
+    end
+end)
+
+-- StarterPlayer.EnableMouseLockOption = true (Real ShiftLock Request)
+
+buttons.UnlockCursor.MouseButton1Click:Connect(function()
+    isCursorUnlocked = not isCursorUnlocked
+    ToggleCursor()
+    if isCursorUnlocked then
+        buttons.UnlockCursor.Text = "Unlock Cursor: On\n(PC Only)"
+    else
+        buttons.UnlockCursor.Text = "Unlock Cursor: Off\n(PC Only)"
+    end
+end)
+
+buttons.UnlockCursorKeyBind.MouseButton1Click:Connect(function()
+    local previousText = buttons.UnlockCursorKeyBind.Text
+    buttons.UnlockCursorKeyBind.Text = "Press a key..."
+    isBindingUnlockCursorKey = true
+    ignoreUnlockCursorToggleAfterBinding = true
+    if UnlockCursorConnection then
+        UnlockCursorConnection:Disconnect()
+    end
+    UnlockCursorConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then
+            return
+        end
+        if input.KeyCode == Enum.KeyCode.Space then
+            return
+        end
+        if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.Backspace then
+            UnlockCursorKeyBind = nil
+            buttons.UnlockCursorKeyBind.Text = "Unlock Cursor\nKey: ..."
+            isBindingUnlockCursorKey = false
+            UnlockCursorConnection:Disconnect()
+            UnlockCursorConnection = nil
+            task.defer(function()
+                ignoreUnlockCursorToggleAfterBinding = false
+            end)
+            return
+        end
+        UnlockCursorKeyBind = input.KeyCode
+        buttons.UnlockCursorKeyBind.Text =
+            "Unlock Cursor\nKey: " .. UnlockCursorKeyBind.Name
+
+        isBindingUnlockCursorKey = false
+        lastUnlockCursorBindTime = tick()
+        UnlockCursorConnection:Disconnect()
+        UnlockCursorConnection = nil
+        task.defer(function()
+            ignoreUnlockCursorToggleAfterBinding = false
+        end)
+    end)
+end)
+
+buttons.ESPSkeletons.MouseButton1Click:Connect(function()
+    isSkeletonESP = not isSkeletonESP
+    if isSkeletonESP then
+        buttons.ESPSkeletons.Text = "Skeleton ESP: On"
+    else
+        buttons.ESPSkeletons.Text = "Skeleton ESP: Off"
+    end
+end)
+
+buttons.ESPBoxes.MouseButton1Click:Connect(function()
+    isBoxESP = not isBoxESP
+    if isBoxESP then
+        buttons.ESPBoxes.Text = "Box ESP: On"
+    else
+        buttons.ESPBoxes.Text = "Box ESP: Off"
+    end
+end)
+
+buttons.ESPChams.MouseButton1Click:Connect(function()
+    isChamsESP = not isChamsESP
+    if isChamsESP then
+        buttons.ESPChams.Text = "Chams ESP: On"
+    else
+        buttons.ESPChams.Text = "Chams ESP: Off"
+    end
+end)
+
+buttons.TeamCheck.MouseButton1Click:Connect(function()
+    TeamCheckESP = not TeamCheckESP
+    if TeamCheckESP then
+        buttons.TeamCheck.Text = "Team Check ESP: On"
+    else
+        buttons.TeamCheck.Text = "Team Check ESP: Off"
+    end
+end)
+
+buttons.LedgeClimber.MouseButton1Click:Connect(function()
+    isLedgeClimberEnabled = not isLedgeClimberEnabled
+    if isLedgeClimberEnabled then
+        buttons.LedgeClimber.Text = "Ledge Climber: On\n(Beta)"
+    else
+        buttons.LedgeClimber.Text = "Ledge Climber: Off\n(Beta)"
+    end
+end)
+
+buttons.FullBright.MouseButton1Click:Connect(function()
+    isFullBrightEnabled = not isFullBrightEnabled
+    if isFullBrightEnabled then
+        saveOriginalLighting()
+        applyFullbright()
+        buttons.FullBright.Text = "Full Bright: On"
+    else
+	    restoreLighting()
+        buttons.FullBright.Text = "Full Bright: Off"
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed or isBindingMenuKey or isBindingUnlockCursorKey or ignoreMenuToggleAfterBinding or ignoreUnlockCursorToggleAfterBinding then
+        return
+    end
+    if menuKeyBind and input.KeyCode == menuKeyBind then
+        setMenuOpen(not menuFrame.Visible)
+    end
+    if input.KeyCode == UnlockCursorKeyBind then
+        isCursorUnlocked = not isCursorUnlocked
+        ToggleCursor()
+        if isCursorUnlocked then
+            buttons.UnlockCursor.Text = "Unlock Cursor: On\n(PC Only)"
+        else
+            buttons.UnlockCursor.Text = "Unlock Cursor: Off\n(PC Only)"
+        end
+    end
+end)
+
+local function disableAllFeatures()
+    if isAntiFlingEnabled then
+        isAntiFlingEnabled = false
+        disableAntiFling()
+        buttons.AntiFling.Text = "Anti Fling: Off"
+    end
+
+    if isNoClipEnabled then
+        isNoClipEnabled = false
+        disableNoClip()
+        buttons.NoClip.Text = "No Clip: Off"
+    end
+
+    if isInfJumping then
+        isInfJumping = false
+        disableInfJump()
+        buttons.InfiniteJump.Text = "Infinite Jump: Off"
+    end
+
+    if isAirStrafeEnabled then
+        isAirStrafeEnabled = false
+        buttons.AirStrafe.Text = "Air Strafe: Off"
+    end
+
+    if isMomentumEnabled then
+        isMomentumEnabled = false
+        buttons.Momentum.Text = "Ground Momentum: Off"
+    end
+
+    if isNoSlowEnabled then
+        isNoSlowEnabled = false
+        buttons.NoSlow.Text = "No Slow: Off"
+    end
+
+    if isXRAYEnabled then
+        isXRAYEnabled = false
+        DisableXRAY()
+        buttons.XRAY.Text = "XRAY: Off"
+    end
+
+    if thirdPersonState ~= 0 then
+        thirdPersonState = 0
+        DisableThirdPerson()
+        buttons.ThirdPerson.Text = "Force Third Person: Off"
+    end
+
+    if firstPersonState ~= 0 then
+        firstPersonState = 0
+        DisableFirstPerson()
+        buttons.FirstPerson.Text = "Force First Person: Off"
+    end
+
+    if isCursorUnlocked then
+        isCursorUnlocked = false
+        ToggleCursor()
+        buttons.UnlockCursor.Text = "Unlock Cursor: Off\n(PC Only)"
+    end
+
+    if isSkeletonESP or isBoxESP or isChamsESP then
+        isSkeletonESP = false
+        isBoxESP = false
+        isChamsESP = false
+        buttons.ESPSkeletons.Text = "Skeleton ESP: Off"
+        buttons.ESPBoxes.Text = "Box ESP: Off"
+        buttons.ESPChams.Text = "Chams ESP: Off"
+    end
+
+    if TeamCheckESP then
+        TeamCheckESP = false
+        buttons.TeamCheck.Text = "Team Check ESP: Off"
+    end
+
+    if isLedgeClimbingEnabled then
+        isLedgeClimbingEnabled = false
+        buttons.LedgeClimbing.Text = "Ledge Climbing: Off\n(Beta)"
+    end
+
+    if isLedgeClimberEnabled then
+        isLedgeClimberEnabled = false
+        buttons.LedgeClimber.Text = "Ledge Climber: Off\n(Beta)"
+    end
+
+    if isFullBrightEnabled then
+        isFullBrightEnabled = false
+        restoreLighting()
+        buttons.FullBright.Text = "Full Bright: Off"
+    end
+end
