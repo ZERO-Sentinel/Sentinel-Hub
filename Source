@@ -68,7 +68,7 @@ local MIN_LEDGE_HEIGHT = 0.5
 local isFullBrightEnabled = false
 local originalLighting = nil
 local FullBright = {Brightness = 2, ClockTime = 14, FogEnd = 100000, GlobalShadows = false, OutdoorAmbient = Color3.fromRGB(128, 128, 128)}
-local ScriptURL = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Sentinel-Hub/main/Source"))()'
+local ScriptURL = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Sentinel-Hub/refs/heads/main/Source"))()'
 
 game.Players.LocalPlayer.OnTeleport:Connect(function(State)
 	if isSentinelKept and queueteleport then
