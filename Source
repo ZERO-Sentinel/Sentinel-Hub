@@ -46,6 +46,7 @@ local savedMinZoom = nil
 local savedMaxZoom = nil
 local savedCameraOffset = nil
 local isShiftLockEnabled = false
+local isShiftLockDisabled = false
 local shiftLockConnection = nil
 local savedShiftLockState = nil
 local isCursorUnlocked = false
@@ -2795,6 +2796,11 @@ buttons.FirstPerson.MouseButton1Click:Connect(function()
 end)
 
 buttons.FShiftlock.MouseButton1Click:Connect(function()
+    if isShiftLockDisabled then
+        isShiftLockDisabled = false
+        ResetShiftLock()
+        buttons.FDShiftlock.Text = "Disable ShiftLock: Off\n(PC Only)"
+    end
     isShiftLockEnabled = not isShiftLockEnabled
     if isShiftLockEnabled then
         EnableShiftlock()
@@ -2806,8 +2812,13 @@ buttons.FShiftlock.MouseButton1Click:Connect(function()
 end)
 
 buttons.FDShiftlock.MouseButton1Click:Connect(function()
-    isShiftLockEnabled = not isShiftLockEnabled
     if isShiftLockEnabled then
+        isShiftLockEnabled = false
+        ResetShiftLock()
+        buttons.FShiftlock.Text = "Force ShiftLock: Off\n(PC Only)"
+    end
+    isShiftLockDisabled = not isShiftLockDisabled
+    if isShiftLockDisabled then
         DisableShiftlock()
         buttons.FDShiftlock.Text = "Disable ShiftLock: On\n(PC Only)"
     else
