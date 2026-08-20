@@ -12,6 +12,7 @@ local CoreGui = game:GetService("CoreGui")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 local camera = workspace.CurrentCamera
+local viewport = workspace.CurrentCamera.ViewportSize
 local queueteleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
 
 local buttons = {}
@@ -1209,7 +1210,8 @@ buttons.Open.Image = "rbxassetid://86826303307578"
 buttons.Open.ImageColor3 = Color3.fromRGB(255, 255, 255)
 buttons.Open.ScaleType = Enum.ScaleType.Fit
 buttons.Open.Size = UDim2.new(0, 48, 0, 48)
-buttons.Open.Position = UDim2.new(0, 20, 0, 380)
+buttons.Open.AnchorPoint = Vector2.new(0.5, 0)
+buttons.Open.Position = UDim2.new(0, (viewport.X / 2), 0, 10)
 buttons.Open.ZIndex = 2147483647
 buttons.Open.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 buttons.Open.BackgroundTransparency = 0
@@ -2168,8 +2170,22 @@ local dragInput, dragStart, startPos
 
 local function updateButtonPosition(input)
     local delta = input.Position - dragStart
-    local newX = math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - buttons.Open.AbsoluteSize.X)
-    local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - buttons.Open.AbsoluteSize.Y)
+
+    local viewport = workspace.CurrentCamera.ViewportSize
+    local halfWidth = buttons.Open.AbsoluteSize.X / 2
+
+    local newX = math.clamp(
+        startPos.X.Offset + delta.X,
+        halfWidth,
+        viewport.X - halfWidth
+    )
+
+    local newY = math.clamp(
+        startPos.Y.Offset + delta.Y,
+        0,
+        viewport.Y - buttons.Open.AbsoluteSize.Y
+    )
+
     buttons.Open.Position = UDim2.new(0, newX, 0, newY)
 
     if delta.Magnitude > 5 then
