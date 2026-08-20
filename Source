@@ -1619,27 +1619,27 @@ corners.Spectate = Instance.new("UICorner")
 corners.Spectate.CornerRadius = UDim.new(0, 10)
 corners.Spectate.Parent = buttons.Spectate
 
-buttons.GoTo = Instance.new("TextButton")
-buttons.GoTo.Name = "GoToButton"
-buttons.GoTo.Text = "Player TP Menu"
-buttons.GoTo.AnchorPoint = Vector2.new(0.5, 0.5)
-buttons.GoTo.Size = UDim2.new(0.32, 0, 0.12, 0)
-buttons.GoTo.Position = UDim2.new(1.410, 0, 0.25, 0)
-buttons.GoTo.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-buttons.GoTo.BorderSizePixel = 0
-buttons.GoTo.TextScaled = true
-buttons.GoTo.TextWrapped = true
-buttons.GoTo.TextColor3 = Color3.fromRGB(255, 255, 255)
-buttons.GoTo.Parent = contentFrame
+buttons.PlayerTPMenu = Instance.new("TextButton")
+buttons.PlayerTPMenu.Name = "PlayerTPMenuButton"
+buttons.PlayerTPMenu.Text = "Player TP Menu"
+buttons.PlayerTPMenu.AnchorPoint = Vector2.new(0.5, 0.5)
+buttons.PlayerTPMenu.Size = UDim2.new(0.32, 0, 0.12, 0)
+buttons.PlayerTPMenu.Position = UDim2.new(1.410, 0, 0.25, 0)
+buttons.PlayerTPMenu.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+buttons.PlayerTPMenu.BorderSizePixel = 0
+buttons.PlayerTPMenu.TextScaled = true
+buttons.PlayerTPMenu.TextWrapped = true
+buttons.PlayerTPMenu.TextColor3 = Color3.fromRGB(255, 255, 255)
+buttons.PlayerTPMenu.Parent = contentFrame
 
-constraints.GoTo = Instance.new("UITextSizeConstraint")
-constraints.GoTo.MaxTextSize = 14
-constraints.GoTo.MinTextSize = 8
-constraints.GoTo.Parent = buttons.GoTo
+constraints.PlayerTPMenu = Instance.new("UITextSizeConstraint")
+constraints.PlayerTPMenu.MaxTextSize = 14
+constraints.PlayerTPMenu.MinTextSize = 8
+constraints.PlayerTPMenu.Parent = buttons.PlayerTPMenu
 
-constraints.GoTo = Instance.new("UICorner")
-constraints.GoTo.CornerRadius = UDim.new(0, 10)
-constraints.GoTo.Parent = buttons.GoTo
+constraints.PlayerTPMenu = Instance.new("UICorner")
+constraints.PlayerTPMenu.CornerRadius = UDim.new(0, 10)
+constraints.PlayerTPMenu.Parent = buttons.PlayerTPMenu
 
 buttons.InfiniteZoom = Instance.new("TextButton")
 buttons.InfiniteZoom.Name = "InfiniteZoomButton"
@@ -2191,7 +2191,7 @@ for buttonText, sectionButton in pairs(sectionButtons) do
             buttons.InfiniteJump.Visible = true
             buttons.TPTool.Visible = true
             buttons.Spectate.Visible = true
-            buttons.GoTo.Visible = true
+            buttons.PlayerTPMenu.Visible = true
             buttons.InfiniteZoom.Visible = true
             buttons.AirStrafe.Visible = true
             buttons.Momentum.Visible = true
@@ -2478,7 +2478,7 @@ end)
 
 buttons.TouchFling.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Touch-Fling/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Touch-Fling/refs/heads/main/Source"))()
     end)
 end)
 
@@ -2521,7 +2521,7 @@ end)
 
 buttons.Speed.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Speed/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Speed-Hack/refs/heads/main/Source"))()
     end)
 end)
 
@@ -2533,31 +2533,31 @@ end)
 
 buttons.InvincibleFly.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Invincible-Fly/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Invincible-Fly/refs/heads/main/Source"))()
     end)
 end)
 
 buttons.TPTool.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/TP-Tool/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/TP-Tool/refs/heads/main/Source"))()
     end)
 end)
 
 buttons.Spectate.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Spectate/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Spectate-Menu/refs/heads/main/Source"))()
     end)
 end)
 
-buttons.GoTo.MouseButton1Click:Connect(function()
+buttons.PlayerTPMenu.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/GoTo/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Player-TP-Menu/refs/heads/main/Source"))()
     end)
 end)
 
 buttons.CShiftlock.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Shift-Lock/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Custom-ShiftLock/refs/heads/main/Source"))()
     end)
 end)
 
