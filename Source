@@ -2466,7 +2466,7 @@ end)
 
 buttons.Crypton.MouseButton1Click:Connect(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Official-0/Crypton/main/Source"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Crypton/refs/heads/main/Source"))()
     end)
 end)
 
