@@ -70,6 +70,29 @@ local MAX_LEDGE_HEIGHT = 3.5
 local MIN_LEDGE_HEIGHT = 0.5
 local isFullBrightEnabled = false
 local originalLighting = nil
+local SelectedFont = 0
+local FontNames = {
+    [0] = "Default",
+    [1] = "Cursive",
+    [2] = "Teko",
+    [3] = "AudioWide",
+    [4] = "Montserrat",
+    [5] = "Silkscreen",
+    [6] = "Blaka",
+    [7] = "NoText"
+}
+local FontIDs = {
+    [1] = 12187367901,
+    [2] = 12187376174,
+    [3] = 12187360881,
+    [4] = 11702779517,
+    [5] = 12187371840,
+    [6] = 12187365104
+}
+local OriginalFonts = {}
+local OriginalTexts = {}
+local FontName = FontNames[SelectedFont]
+-- 12187367901=Cursive, 12187376174=Teko, 12187360881=AudioWide, 11702779517=Montserrat, 12187371840=Silkscreen, 12187365104=Blaka
 local FullBright = {Brightness = 2, ClockTime = 14, FogEnd = 100000, GlobalShadows = false, OutdoorAmbient = Color3.fromRGB(128, 128, 128)}
 local ScriptURL = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/ZERO-Sentinel/Sentinel-Hub/refs/heads/main/Source"))()'
 
@@ -910,6 +933,80 @@ local function restoreLighting()
 	end
 end
 
+local function IsMenuObject(object)
+	local ancestor = object:FindFirstAncestorOfClass("ScreenGui")
+	return ancestor and ancestor:GetAttribute("SentinelFontMenu") == true
+end
+
+local function UpdateFont()
+    buttons.FontsList.Text = FontNames[SelectedFont]
+    if SelectedFont == 0 then
+        buttons.FontsList.FontFace = Font.fromEnum(Enum.Font.SourceSans)
+    else
+        buttons.FontsList.FontFace =
+            Font.new("rbxassetid://" .. FontIDs[SelectedFont])
+    end
+end
+
+local function IsTextObject(object)
+    return object:IsA("TextLabel")
+        or object:IsA("TextButton")
+        or object:IsA("TextBox")
+end
+
+local function SaveOriginal(object)
+    if OriginalFonts[object] == nil then
+        OriginalFonts[object] = object.FontFace
+    end
+    if OriginalTexts[object] == nil then
+        OriginalTexts[object] = object.Text
+    end
+end
+
+local function ApplyFont(fontId)
+    local success, font = pcall(function()
+        return Font.fromId(fontId)
+    end)
+    if not success then
+        warn("Can't load font:", fontId)
+        return
+    end
+    for _, object in ipairs(game:GetDescendants()) do
+        if IsTextObject(object) and not IsMenuObject(object) then
+            SaveOriginal(object)
+            pcall(function()
+                object.FontFace = font
+            end)
+        end
+    end
+end
+
+local function HideText()
+    for _, object in ipairs(game:GetDescendants()) do
+        if IsTextObject(object) and not IsMenuObject(object) then
+            SaveOriginal(object)
+            object.Text = ""
+        end
+    end
+end
+
+local function ResetFonts()
+    for object, originalFont in pairs(OriginalFonts) do
+        if object and object.Parent then
+            pcall(function()
+                object.FontFace = originalFont
+            end)
+        end
+    end
+    for object, originalText in pairs(OriginalTexts) do
+        if object and object.Parent then
+            pcall(function()
+                object.Text = originalText
+            end)
+        end
+    end
+end
+
 -- ============================================
 -- LOOPED FUNCTIONS
 -- ============================================
@@ -1099,10 +1196,12 @@ local features = {
 -- UI CREATION
 -- ============================================
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ModernMenuGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = CoreGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ModernMenuGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+ScreenGui:SetAttribute("SentinelFontMenu", true)
 
 local menuBlur = Instance.new("BlurEffect")
 menuBlur.Name = "MenuBlur"
@@ -1118,7 +1217,7 @@ menuFrame.BackgroundTransparency = 0.12
 menuFrame.BorderSizePixel = 0
 menuFrame.ZIndex = 1
 menuFrame.Visible = false
-menuFrame.Parent = screenGui
+menuFrame.Parent = ScreenGui
 
 local menuCorner = Instance.new("UICorner")
 menuCorner.CornerRadius = UDim.new(0, 22)
@@ -1218,7 +1317,7 @@ buttons.Open.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 buttons.Open.BackgroundTransparency = 0
 buttons.Open.BorderSizePixel = 0
 buttons.Open.AutoButtonColor = true
-buttons.Open.Parent = screenGui
+buttons.Open.Parent = ScreenGui
 
 corners.Open = Instance.new("UICorner")
 corners.Open.CornerRadius = UDim.new(0, 14)
@@ -2295,6 +2394,155 @@ for buttonText, sectionButton in pairs(sectionButtons) do
             buttons.AirWalk.Visible = true
             buttons.FDShiftlock.Visible = true
             topBarLabel.Text = "Main"
+        elseif buttonText == "Others" then
+            local OthersFrame = contentFrame:FindFirstChild("OthersFrame")
+            if not OthersFrame then
+                OthersFrame = Instance.new("Frame")
+                OthersFrame.Name = "OthersFrame"
+                OthersFrame.Size = UDim2.new(1, 0, 1, 0)
+                OthersFrame.BackgroundTransparency = 1
+                OthersFrame.Parent = contentFrame
+
+                buttons.Fonts = Instance.new("TextLabel")
+                buttons.Fonts.Name = "FontsLabel"
+                buttons.Fonts.Text = "Fonts"
+                buttons.Fonts.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.Fonts.Size = UDim2.new(0.32, 0, 0.03, 0)
+                buttons.Fonts.Position = UDim2.new(-0.365, 0, -0.094, 0)
+                buttons.Fonts.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.Fonts.BorderSizePixel = 0
+                buttons.Fonts.TextScaled = true
+                buttons.Fonts.TextWrapped = true
+                buttons.Fonts.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.Fonts.Parent = OthersFrame
+
+                constraints.Fonts = Instance.new("UITextSizeConstraint")
+                constraints.Fonts.MaxTextSize = 14
+                constraints.Fonts.MinTextSize = 8
+                constraints.Fonts.Parent = buttons.Fonts
+
+                corners.Fonts = Instance.new("UICorner")
+                corners.Fonts.CornerRadius = UDim.new(0, 5)
+                corners.Fonts.Parent = buttons.Fonts
+
+                buttons.FontsList = Instance.new("TextButton")
+                buttons.FontsList.Name = "FontsListButton"
+                buttons.FontsList.Text = FontNames[SelectedFont]
+                buttons.FontsList.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.FontsList.Size = UDim2.new(0.2, 0, 0.085, 0)
+                buttons.FontsList.Position = UDim2.new(-0.365, 0, -0.03, 0)
+                buttons.FontsList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.FontsList.BorderSizePixel = 0
+                buttons.FontsList.TextScaled = true
+                buttons.FontsList.TextWrapped = true
+                buttons.FontsList.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.FontsList.Parent = OthersFrame
+
+                constraints.FontsList = Instance.new("UITextSizeConstraint")
+                constraints.FontsList.MaxTextSize = 20
+                constraints.FontsList.MinTextSize = 14
+                constraints.FontsList.Parent = buttons.FontsList
+
+                corners.FontsList = Instance.new("UICorner")
+                corners.FontsList.CornerRadius = UDim.new(0, 8)
+                corners.FontsList.Parent = buttons.FontsList
+
+                buttons.FontsLeft = Instance.new("TextButton")
+                buttons.FontsLeft.Name = "FontsLeftButton"
+                buttons.FontsLeft.Text = "←"
+                buttons.FontsLeft.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.FontsLeft.Size = UDim2.new(0.055, 0, 0.085, 0)
+                buttons.FontsLeft.Position = UDim2.new(-0.498, 0, -0.03, 0)
+                buttons.FontsLeft.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.FontsLeft.BorderSizePixel = 0
+                buttons.FontsLeft.TextScaled = true
+                buttons.FontsLeft.TextWrapped = true
+                buttons.FontsLeft.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.FontsLeft.Parent = OthersFrame
+
+                constraints.FontsLeft = Instance.new("UITextSizeConstraint")
+                constraints.FontsLeft.MaxTextSize = 14
+                constraints.FontsLeft.MinTextSize = 8
+                constraints.FontsLeft.Parent = buttons.FontsLeft
+
+                corners.FontsLeft = Instance.new("UICorner")
+                corners.FontsLeft.CornerRadius = UDim.new(0, 8)
+                corners.FontsLeft.Parent = buttons.FontsLeft
+
+                buttons.FontsRight = Instance.new("TextButton")
+                buttons.FontsRight.Name = "FontsRightButton"
+                buttons.FontsRight.Text = "→"
+                buttons.FontsRight.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.FontsRight.Size = UDim2.new(0.055, 0, 0.085, 0)
+                buttons.FontsRight.Position = UDim2.new(-0.232, 0, -0.03, 0)
+                buttons.FontsRight.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.FontsRight.BorderSizePixel = 0
+                buttons.FontsRight.TextScaled = true
+                buttons.FontsRight.TextWrapped = true
+                buttons.FontsRight.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.FontsRight.Parent = OthersFrame
+
+                constraints.FontsRight = Instance.new("UITextSizeConstraint")
+                constraints.FontsRight.MaxTextSize = 14
+                constraints.FontsRight.MinTextSize = 8
+                constraints.FontsRight.Parent = buttons.FontsRight
+
+                corners.FontsRight = Instance.new("UICorner")
+                corners.FontsRight.CornerRadius = UDim.new(0, 8)
+                corners.FontsRight.Parent = buttons.FontsRight
+
+                buttons.FontsRight.MouseButton1Click:Connect(function()
+                    SelectedFont += 1
+	                if SelectedFont > #FontIDs + 1 then
+		                SelectedFont = 0
+	                end
+	                UpdateFont()
+                end)
+
+                buttons.FontsLeft.MouseButton1Click:Connect(function()
+                    SelectedFont -= 1
+                    if SelectedFont < 0 then
+                        SelectedFont = #FontIDs + 1
+                    end
+                    UpdateFont()
+                end)
+
+                buttons.FontsList.MouseButton1Click:Connect(function()
+                	if SelectedFont == 0 then
+		                ResetFonts()
+	                elseif SelectedFont <= #FontIDs then
+		                ResetFonts()
+		                ApplyFont(FontIDs[SelectedFont])
+	                else
+		                HideText()
+
+	                end
+                end)
+
+                buttons.Logs = Instance.new("TextButton")
+                buttons.Logs.Name = "LogsButton"
+                buttons.Logs.Text = "Logs\n(Not Implemented)"
+                buttons.Logs.AnchorPoint = Vector2.new(0.5, 0.5)
+                buttons.Logs.Size = UDim2.new(0.32, 0, 0.12, 0)
+                buttons.Logs.Position = UDim2.new(-0.010, 0, -0.05, 0)
+                buttons.Logs.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                buttons.Logs.BorderSizePixel = 0
+                buttons.Logs.TextScaled = true
+                buttons.Logs.TextWrapped = true
+                buttons.Logs.TextColor3 = Color3.fromRGB(255, 255, 255)
+                buttons.Logs.Parent = OthersFrame
+
+                constraints.Logs = Instance.new("UITextSizeConstraint")
+                constraints.Logs.MaxTextSize = 14
+                constraints.Logs.MinTextSize = 8
+                constraints.Logs.Parent = buttons.Logs
+
+                corners.Logs = Instance.new("UICorner")
+                corners.Logs.CornerRadius = UDim.new(0, 10)
+                corners.Logs.Parent = buttons.Logs
+            end
+            OthersFrame.Visible = true
+            topBarLabel.Text = buttonText
         elseif buttonText == "TSB" then
             local tsbFrame = contentFrame:FindFirstChild("TSBFrame")
             if not tsbFrame then
@@ -2444,12 +2692,12 @@ for buttonText, sectionButton in pairs(sectionButtons) do
                     if queueteleport then
                         queueteleport("")
                     end
-                    if screenGui then
+                    if ScreenGui then
                         menuBlur:Destroy()
                         menuBlur2:Destroy()
                         inputBlocker:Destroy()
                         menuFrame:Destroy()
-                        screenGui:Destroy()
+                        ScreenGui:Destroy()
                     end
                 end)
 
