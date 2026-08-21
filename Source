@@ -123,7 +123,7 @@ local function enableNoClip()
         local character = game.Players.LocalPlayer.Character
         if character then
             for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
+                if part:IsA("BasePart") and part.Name ~= _G.SentinelAirWalkPartName then
                     if originalCollision[part] == nil then
                         originalCollision[part] = part.CanCollide
                     end
